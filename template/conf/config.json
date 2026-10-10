@@ -1,0 +1,11 @@
+{
+  "mode": "touchpad",
+  "sensitivity": 2.0,
+  "theme": "dark",
+  "keypad": [
+    { "label": "ESC", "key": "KEY_ESC", "x": 0, "y": 0, "w": 1, "h": 1 },
+    { "label": "TAB", "key": "KEY_TAB", "x": 1, "y": 0, "w": 1, "h": 1 },
+    { "label": "SPACE", "key": "KEY_SPACE", "x": 2, "y": 0, "w": 2, "h": 1 },
+    { "label": "ENTER", "key": "KEY_ENTER", "x": 4, "y": 0, "w": 2, "h": 1 }
+  ]
+}
