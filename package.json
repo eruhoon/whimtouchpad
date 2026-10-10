@@ -1,0 +1,26 @@
+{
+  "name": "whimtouchpad",
+  "version": "0.1.0.0",
+  "description": "Secondary screen touchpad and virtual keypad overlay for dual-screen Linux handhelds (RGDS/Rocknix/PortMaster)",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/clean.mjs",
+    "test": "node scripts/test.mjs"
+  },
+  "keywords": [
+    "portmaster",
+    "rocknix",
+    "rgds",
+    "touchpad",
+    "keypad",
+    "uinput",
+    "dual-screen",
+    "arm64"
+  ],
+  "author": "eruhoon",
+  "license": "MIT",
+  "devDependencies": {
+    "adm-zip": "^0.6.1"
+  }
+}
