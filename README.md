@@ -25,20 +25,42 @@ RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 휴대용 게임기
 
 ---
 
-## PortMaster 게임 연동 방법
+## PortMaster 게임 연동 가이드
 
-PortMaster 게임 실행 쉘 스크립트(예: `Farland Odyssey.sh`, `StardewValley.sh`)에 아래와 같이 훅을 추가합니다:
+기기에서 실행할 PortMaster 게임(예: `FARLANDODYSSEY`, `StardewValley` 등)에 WhimPad를 연동하는 2단계 방법입니다.
 
+### 1단계: WhimPad 패키지 복사 및 권한 설정
+
+기기 게임 디렉토리 바로 아래에 `whimpad` 폴더를 생성하고, 패키지의 파일들을 복사합니다.
+
+```bash
+# [예시] Mac/PC 터미널에서 RGDS 기기로 복사 시
+scp -r template/* root@<기기_IP>:/roms/ports/<게임폴더명>/whimpad/
+```
+
+복사 후 기기 터미널(SSH)에서 실행 권한을 부여합니다:
+```bash
+chmod +x /roms/ports/<게임폴더명>/whimpad/whim_hook.sh
+chmod +x /roms/ports/<게임폴더명>/whimpad/whimtouchpad_backend
+```
+
+---
+
+### 2단계: 게임 실행 스크립트(`.sh`) 수정
+
+게임의 실행 스크립트(예: `/roms/ports/Farland Odyssey.sh`, `/roms/ports/StardewValley.sh`)를 열어 아래 2곳에 코드를 추가합니다.
+
+#### ① 게임 실행 직전 (`wine "$TARGET_EXE"` 또는 `$GAMEDIR/game.bin` 바로 윗줄):
 ```bash
 # === [WhimPad Hook Start] ===
 if [ -f "$GAMEDIR/whimpad/whim_hook.sh" ]; then
   source "$GAMEDIR/whimpad/whim_hook.sh"
 fi
 # === [WhimPad Hook End] ===
+```
 
-# 메인 게임 실행
-$GAMEDIR/game.bin ...
-
+#### ② 게임 실행 직후 (스크립트 맨 끝 `exit 0` 바로 윗줄):
+```bash
 # === [WhimPad Cleanup] ===
 if [ -n "$WHIM_BACKEND_PID" ]; then kill $WHIM_BACKEND_PID 2>/dev/null || true; fi
 if [ -n "$WHIM_GESTURE_PID" ]; then kill $WHIM_GESTURE_PID 2>/dev/null || true; fi
