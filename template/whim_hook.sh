@@ -32,13 +32,15 @@ export SDL_APP_ID=whimpad
 python3 "$SCRIPT_DIR/ui.py" >/dev/null 2>&1 &
 export WHIM_UI_PID=$!
 
-# 창이 뜬 후 하단 DSI-1 전체화면으로 확실하게 확장
+# 4. 하단 화면 안정화 및 전체화면 유지 백그라운드 가드
+# 게임 기동 시점(창 생성, 포커스 전환, Rocknix 기본 절전 등)의 레이스 컨디션을 방지하기 위해
+# 일정 시간 동안 DSI-1 전원 및 whimpad 전체화면 배치를 반복 보장합니다.
 (
-  for i in $(seq 1 10); do
-    sleep 0.2
-    if swaymsg '[app_id="whimpad"] move container to output DSI-1; [app_id="whimpad"] fullscreen enable' >/dev/null 2>&1; then
-      break
-    fi
+  for i in $(seq 1 20); do
+    sleep 0.3
+    swaymsg output DSI-1 power on >/dev/null 2>&1
+    swaymsg '[app_id="whimpad"] move container to output DSI-1' >/dev/null 2>&1 || swaymsg '[title="whimpad"] move container to output DSI-1' >/dev/null 2>&1
+    swaymsg '[app_id="whimpad"] fullscreen enable' >/dev/null 2>&1 || swaymsg '[title="whimpad"] fullscreen enable' >/dev/null 2>&1
   done
 ) &
 
