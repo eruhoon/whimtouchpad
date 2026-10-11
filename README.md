@@ -27,7 +27,7 @@ RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 휴대용 게임기
 
 ## PortMaster 게임 연동 가이드
 
-기기에서 실행할 PortMaster 게임(예: `FARLANDODYSSEY`, `StardewValley` 등)에 WhimPad를 연동하는 2단계 방법입니다.
+기기에서 실행할 PortMaster 게임(예: `StardewValley` 등)에 WhimPad를 연동하는 2단계 방법입니다.
 
 ### 1단계: WhimPad 패키지 복사 및 권한 설정
 
@@ -48,9 +48,9 @@ chmod +x /roms/ports/<게임폴더명>/whimpad/whimtouchpad_backend
 
 ### 2단계: 게임 실행 스크립트(`.sh`) 수정
 
-게임의 실행 스크립트(예: `/roms/ports/Farland Odyssey.sh`, `/roms/ports/StardewValley.sh`)를 열어 아래 2곳에 코드를 추가합니다.
+게임의 실행 스크립트(예: `/roms/ports/StardewValley.sh`)를 열어 아래 2곳에 코드를 추가합니다.
 
-#### ① 게임 실행 직전 (`wine "$TARGET_EXE"` 또는 `$GAMEDIR/game.bin` 바로 윗줄):
+#### ① 게임 실행 직전 (`$GAMEDIR/game.bin` 또는 게임 런처 실행 바로 윗줄):
 ```bash
 # === [WhimPad Hook Start] ===
 if [ -f "$GAMEDIR/whimpad/whim_hook.sh" ]; then
