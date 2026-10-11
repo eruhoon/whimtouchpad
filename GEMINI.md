@@ -23,13 +23,14 @@
 
 ### 2. 커밋 메시지 및 분리 규칙
 
-커밋 메시지 제목에는 별도의 `[vX.Y.Z.R]` 태그를 붙이지 않고 Conventional Commits 형식을 깔끔하게 유지합니다.
+- **언어 규칙**: 커밋 메시지는 **영어(English)**로 작성합니다.
+- 커밋 메시지 제목에는 별도의 `[vX.Y.Z.R]` 태그를 붙이지 않고 Conventional Commits 형식을 깔끔하게 유지합니다.
 
 #### 사용자가 직접 "커밋해줘" 요청 시 (2단계 커밋)
 1. **1단계 - 작업 변경 사항 커밋**:
    - 실제 기능/수정 코드 변경 사항만 스테이징하여 커밋합니다.
-   - 형식: `<type>: <작업 내용 설명>`
-   - 예시: `feat: 터치패드 제스처 및 uinput 이벤트 맵핑 추가`
+   - 형식: `<type>: <description in English>`
+   - 예시: `feat: add touchpad gestures and uinput event mapping`
 2. **2단계 - 버전 갱신(버전업) 커밋**:
    - `package.json` 등 메타데이터 파일의 버전을 올리고 해당 파일만 스테이징하여 별도 커밋합니다.
    - 형식: `chore(release): bump version to vX.Y.Z.0` (또는 `chore: bump version to vX.Y.Z.0`)
@@ -37,8 +38,8 @@
 
 #### 에이전트 자율 작업 커밋 시 (Revision)
 - 에이전트가 자체 판단하여 작업 후 커밋할 때는 작업 내용 단위로 1개 커밋으로 진행합니다.
-- 형식: `<type>: <작업 내용 설명>`
-- 예시: `fix: 터치 릴리즈 누락 버그 수정`
+- 형식: `<type>: <description in English>`
+- 예시: `fix: handle missing touch release event`
 
 ---
 
