@@ -1,17 +1,51 @@
-# WhimTouchpad 🎮
+# WhimPad 🎮
 
-RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 휴대용 게임기에서 하단 보조 스크린을 마우스 터치패드 또는 가상 키패드로 활용할 수 있게 해주는 초경량 백그라운드 오버레이 데몬입니다.
+RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 휴대용 게임기에서 하단 보조 스크린을 **마우스 트랙패드** 또는 **가상 키보드**로 활용할 수 있게 해주는 초경량 오버레이입니다.
 
 ---
 
-## 주요 특징
+## 주요 기능
 
-- **초경량 네이티브 코어**: C/SDL2 기반으로 설계되어 메모리 점유율(수 MB 수준)과 CPU 사용량을 극도로 낮추어 메인 게임 성능에 영향을 주지 않습니다.
-- **PortMaster 런처 훅 지원**: 기존 게임 `.sh` 파일 상단에 몇 줄의 훅 스크립트만 추가하면 게임 실행 시 백그라운드로 보조 화면에 자동 활성화됩니다.
-- **다양한 모드**:
-  - `touchpad`: 보조 화면을 마우스 트랙패드로 전환 (터치 드래그 커서 이동, 탭 클릭 등).
-  - `keypad`: 게임에 부족한 단축키(ESC, TAB, ENTER, F1~F12 등)를 화면 터치 버튼으로 지원.
-- **리눅스 uinput 연동**: `/dev/uinput` 커널 드라이버를 통해 실제 물리 입력과 동일한 가상 마우스/키보드 이벤트를 전송합니다.
+- **초경량 네이티브 & 하드웨어 가속 UI**: 
+  - 리눅스 커널 `/dev/uinput` 및 독점 터치 이벤트(`EVIOCGRAB`)를 전담하는 고속 C 백엔드 데몬.
+  - SDL2 하드웨어 가속 렌더러와 나눔고딕 TTF 텍스처 캐싱을 적용해 CPU/메모리 부하 없이 부드러운 60fps UI 제공.
+- **다양한 제스처 및 레이아웃**:
+  - **트랙패드 모드 (`Pad`)**:
+    - 손가락 1개 드래그: 마우스 커서 부드러운 이동 (커서 가속 지원)
+    - 손가락 1개 탭: 좌클릭
+    - 손가락 1개 더블 탭 후 홀드: **마우스 드래그 (창/아이템 끌기)**
+    - 손가락 2개 드래그: 상/하 휠 스크롤
+    - 하단 고정 터치 버튼: `[좌클릭]`, `[휠 스크롤바]`, `[우클릭]`
+  - **가상 키보드 모드 (`Keys`)**:
+    - 상단 `[키보드로 전환]` 터치 시 Esc, F1~F12, 숫자/특수문자, 방향키, 한/영 입력이 가능한 풀 화상 키보드 지원.
+  - **상단 퀵 메뉴**:
+    - `[설정 (⚙)]`: 톱니바퀴 아이콘 터치 시 마우스 감도, 스크롤 방향, 화면 보호 시간 조절.
+    - `[슬립 (🌙)]`: 초승달 아이콘 터치 시 하단 화면 즉시 블랙아웃(화면 숨김), 화면을 다시 탭하면 오클릭 없이 깨우기.
+- **PortMaster 게임 런처 연동**: 기존 게임 `.sh` 파일 상단/하단에 간단한 훅 스크립트만 추가하면 게임 실행 시 자동 기동 및 게임 종료 시 자동 정리.
+
+---
+
+## PortMaster 게임 연동 방법
+
+PortMaster 게임 실행 쉘 스크립트(예: `Farland Odyssey.sh`, `StardewValley.sh`)에 아래와 같이 훅을 추가합니다:
+
+```bash
+# === [WhimPad Hook Start] ===
+if [ -f "$GAMEDIR/whimpad/whim_hook.sh" ]; then
+  source "$GAMEDIR/whimpad/whim_hook.sh"
+fi
+# === [WhimPad Hook End] ===
+
+# 메인 게임 실행
+$GAMEDIR/game.bin ...
+
+# === [WhimPad Cleanup] ===
+if [ -n "$WHIM_BACKEND_PID" ]; then kill $WHIM_BACKEND_PID 2>/dev/null || true; fi
+if [ -n "$WHIM_GESTURE_PID" ]; then kill $WHIM_GESTURE_PID 2>/dev/null || true; fi
+if [ -n "$WHIM_UI_PID" ]; then kill $WHIM_UI_PID 2>/dev/null || true; fi
+swaymsg output DSI-1 power off >/dev/null 2>&1 || true
+# =========================
+```
 
 ---
 
@@ -28,29 +62,6 @@ pnpm run build
 
 # 빌드 산출물 정리
 pnpm run clean
-```
-
----
-
-## PortMaster 게임 연동 방법
-
-PortMaster 게임 실행 쉘 스크립트(예: `Game.sh`)에 아래와 같이 훅을 추가합니다:
-
-```bash
-# === [WhimTouchpad Hook Start] ===
-if [ -f "$controlfolder/whimtouchpad/whimtouchpad.sh" ]; then
-  "$controlfolder/whimtouchpad/whimtouchpad.sh" --mode=touchpad --screen=1 &
-  WHIM_PID=$!
-fi
-# === [WhimTouchpad Hook End] ===
-
-# 메인 게임 실행
-$GAMEDIR/game.bin ...
-
-# 게임 종료 후 보조 패드 프로세스 종료
-if [ -n "$WHIM_PID" ]; then
-  kill -TERM "$WHIM_PID" 2>/dev/null
-fi
 ```
 
 ---

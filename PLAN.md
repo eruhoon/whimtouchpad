@@ -1,4 +1,4 @@
-# WhimTouchpad 개발 계획서
+# WhimPad 개발 계획서
 
 **RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 보조 스크린 터치패드 & 커스텀 가상 키패드 런처**
 
@@ -19,49 +19,51 @@
 ## 2. 런타임 및 엔진 기술 검토
 
 - 메인 화면의 PortMaster 게임이 CPU/GPU/RAM을 원활하게 쓸 수 있도록 보조 스크린 프로세스는 **최소한의 오버헤드**를 목표로 함.
-- **초경량 네이티브 (C/C++ or Rust with SDL2 / Framebuffer / DRM-KMS)**:
+- **초경량 네이티브 (C + uinput / evdev 독점 grab)**:
   - 메모리 사용량 수 MB 단위, 즉각적인 이벤트 처리로 최우선 후보.
-- **경량 UI 런타임**:
-  - 생산성, 유연한 커스터마이징 UI 표현력과 리소스 소모량 간의 트레이드오프를 테스트 및 벤치마크하여 최종 확정.
+- **SDL2 하드웨어 가속 렌더러**:
+  - 텍스처 캐싱을 적용하여 60fps 부드러운 UI 렌더링 및 초저지연 터치 응답 달성.
 - 빌드/패키징 오케스트레이션 및 릴리즈 번들링은 `pnpm`과 Node.js 스크립트로 일관되게 관리.
 
 ---
 
 ## 3. 핵심 아키텍처 및 동작 원리
 
-1. **하단 디스플레이 타겟팅 (`--screen=sub`)**:
-   - Linux DRM/KMS 인터페이스에서 보조 커넥터(예: DSI-2 또는 `/dev/fb1`)를 지정하여 전체 화면으로 백그라운드 렌더링.
+1. **하단 디스플레이 타겟팅 및 Sway 매핑**:
+   - Wayland / Sway 환경에서 `app_id="whimpad"` 창을 감지하여 보조 커넥터(`DSI-1`)로 전체 화면(`fullscreen enable`) 자동 이동.
 2. **입력 캡처 및 에뮬레이션 (`uinput`)**:
-   - 하단 디스플레이의 터치스크린 입력 장치(`/dev/input/eventX`)를 독점 캡처(`EVIOCGRAB`) 또는 윈도우 터치 이벤트 수신.
-   - **터치패드 모드**:
-     - 1점 드래그 ➔ 마우스 커서 상대 이동 (`REL_X`, `REL_Y`)
+   - 하단 디스플레이의 터치스크린 입력 장치를 `fe5e0000` I2C 경로로 단독 매칭하여 독점 캡처(`EVIOCGRAB`).
+   - **트랙패드 모드**:
+     - 1점 드래그 ➔ 마우스 커서 부드러운 이동 (커서 가속 지원)
      - 1점 탭 ➔ 마우스 좌클릭 (`BTN_LEFT`)
-     - 2점 탭 / 제스처 ➔ 마우스 우클릭 (`BTN_RIGHT`) 또는 휠 스크롤 (`REL_WHEEL`)
+     - 1점 더블 탭 후 홀드 ➔ 마우스 드래그 (`BTN_LEFT` 유지)
+     - 2점 드래그 ➔ 마우스 휠 스크롤 (`REL_WHEEL`)
    - **가상 키패드 모드**:
-     - 화면에 렌더링된 버튼 영역 클릭 시 Linux `uinput`으로 `KEY_ESC`, `KEY_F1`, `KEY_ENTER`, `KEY_SPACE` 등 즉시 발송.
-3. **설정 커스터마이징 (JSON)**:
-   - `conf/keypad.json` 형태로 사용자가 원하는 버튼 라벨, 키 코드, 배치 그리드를 자유롭게 정의 가능.
+     - 화면에 렌더링된 버튼 영역 클릭 시 Linux `uinput`으로 `KEY_ESC`, `KEY_F1~F12`, `KEY_ENTER`, `KEY_SPACE` 등 즉시 발송.
+3. **상단 퀵 제어**:
+   - `[설정 (⚙)]`: 톱니바퀴 아이콘 터치 시 마우스 감도, 스크롤 방향, 화면 보호 시간 조절.
+   - `[슬립 (🌙)]`: 초승달 아이콘 터치 시 하단 화면 즉시 블랙아웃(화면 숨김), 화면 재터치 시 오클릭 없이 깨우기.
 
 ---
 
 ## 4. PortMaster 게임 런처 연동 방식 (.sh 주입)
 
 ```bash
-# === [WhimTouchpad Hook Start] ===
-if [ -f "$controlfolder/whimtouchpad/whimtouchpad.sh" ]; then
-  # 백그라운드로 보조 화면에 터치패드/키패드 실행
-  "$controlfolder/whimtouchpad/whimtouchpad.sh" --mode=touchpad --screen=sub &
-  WHIM_PID=$!
+# === [WhimPad Hook Start] ===
+if [ -f "$GAMEDIR/whimpad/whim_hook.sh" ]; then
+  source "$GAMEDIR/whimpad/whim_hook.sh"
 fi
-# === [WhimTouchpad Hook End] ===
+# === [WhimPad Hook End] ===
 
 # 메인 게임 실행
 $GAMEDIR/game.bin ...
 
-# 게임 종료 후 보조 패드 프로세스 종료
-if [ -n "$WHIM_PID" ]; then
-  kill -TERM "$WHIM_PID" 2>/dev/null
-fi
+# === [WhimPad Cleanup] ===
+if [ -n "$WHIM_BACKEND_PID" ]; then kill $WHIM_BACKEND_PID 2>/dev/null || true; fi
+if [ -n "$WHIM_GESTURE_PID" ]; then kill $WHIM_GESTURE_PID 2>/dev/null || true; fi
+if [ -n "$WHIM_UI_PID" ]; then kill $WHIM_UI_PID 2>/dev/null || true; fi
+swaymsg output DSI-1 power off >/dev/null 2>&1 || true
+# =========================
 ```
 
 ---
