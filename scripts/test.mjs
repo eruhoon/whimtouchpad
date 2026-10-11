@@ -21,7 +21,7 @@ const requiredFiles = [
   'src/main.c',
   'src/uinput.c',
   'src/uinput.h',
-  'template/whimtouchpad.sh',
+  'template/whimpad.sh',
   'template/conf/config.json',
   '.github/workflows/release.yml'
 ];

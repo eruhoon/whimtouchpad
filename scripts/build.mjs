@@ -19,7 +19,7 @@ console.log(`[whimtouchpad] Building version v${pkg.version}...`);
 const isCrossArm64 = process.env.TARGET_ARCH === 'arm64' || process.env.CROSS_COMPILE;
 const cc = isCrossArm64 ? 'aarch64-linux-gnu-gcc' : (process.env.CC || 'gcc');
 
-const outBin = path.join(TEMPLATE_DIR, 'whimtouchpad_backend');
+const outBin = path.join(TEMPLATE_DIR, 'whimpad_backend');
 
 try {
   console.log(`[whimtouchpad] Compiling C backend using ${cc}...`);

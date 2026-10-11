@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
     }
 
     if (argc < 2) {
-        fprintf(stderr, "Usage: whimtouchpad_backend <DATA_DIR> [TOUCH_DEVICE]\n");
+        fprintf(stderr, "Usage: whimpad_backend <DATA_DIR> [TOUCH_DEVICE]\n");
         return 2;
     }
 

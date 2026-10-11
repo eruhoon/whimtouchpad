@@ -41,7 +41,7 @@ scp -r template/* root@<기기_IP>:/roms/ports/<게임폴더명>/whimpad/
 복사 후 기기 터미널(SSH)에서 실행 권한을 부여합니다:
 ```bash
 chmod +x /roms/ports/<게임폴더명>/whimpad/whim_hook.sh
-chmod +x /roms/ports/<게임폴더명>/whimpad/whimtouchpad_backend
+chmod +x /roms/ports/<게임폴더명>/whimpad/whimpad_backend
 ```
 
 ---

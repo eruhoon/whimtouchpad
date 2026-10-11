@@ -18,7 +18,7 @@ swaymsg 'for_window [app_id="whimpad"] move container to output DSI-1' >/dev/nul
 swaymsg 'for_window [app_id="whimpad"] fullscreen enable' >/dev/null 2>&1 || true
 
 # 2. 고속 C 백엔드 데몬 실행 (하단 터치 독점 grab & uinput 장치 등록)
-BACKEND_BIN="$SCRIPT_DIR/whimtouchpad_backend"
+BACKEND_BIN="$SCRIPT_DIR/whimpad_backend"
 if [ -x "$BACKEND_BIN" ]; then
   "$BACKEND_BIN" "$WHIMPAD_RUNTIME_DIR" >/dev/null 2>&1 &
   export WHIM_BACKEND_PID=$!
