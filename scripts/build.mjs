@@ -40,12 +40,13 @@ try {
 fs.copyFileSync(path.join(SRC_DIR, 'controller.py'), path.join(TEMPLATE_DIR, 'controller.py'));
 fs.copyFileSync(path.join(SRC_DIR, 'gesture_manager.py'), path.join(TEMPLATE_DIR, 'gesture_manager.py'));
 
-// 3. 패키징 (ZIP 생성)
-const zipName = `whimtouchpad-v${pkg.version}.zip`;
+// 3. 패키징 (ZIP 생성: 폴더명 whimpad로 통일)
+const tagVersion = pkg.version.split('.').slice(0, 3).join('.');
+const zipName = `whimpad-v${tagVersion}.zip`;
 const zipPath = path.join(DIST_DIR, zipName);
 const zip = new AdmZip();
 
-zip.addLocalFolder(TEMPLATE_DIR, 'whimtouchpad');
+zip.addLocalFolder(TEMPLATE_DIR, 'whimpad');
 zip.writeZip(zipPath);
 
 console.log(`[whimtouchpad] Successfully built release package: ${zipPath}`);
