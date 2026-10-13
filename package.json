@@ -1,6 +1,6 @@
 {
   "name": "whimtouchpad",
-  "version": "0.2.0.0",
+  "version": "0.2.1.0",
   "description": "Secondary screen touchpad and virtual keypad overlay for dual-screen Linux handhelds (RGDS/Rocknix/PortMaster)",
   "type": "module",
   "scripts": {
