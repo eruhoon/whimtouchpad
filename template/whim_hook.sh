@@ -10,6 +10,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export WHIMPAD_RUNTIME_DIR="/run/whimpad"
 mkdir -p "$WHIMPAD_RUNTIME_DIR"
 
+# 게임 폴더 내의 커스텀 whimpad.xml 레이아웃 자동 감지
+if [ -z "$WHIMPAD_CUSTOM_LAYOUT" ]; then
+  if [ -n "$GAMEDIR" ] && [ -f "$GAMEDIR/whimpad.xml" ]; then
+    export WHIMPAD_CUSTOM_LAYOUT="$GAMEDIR/whimpad.xml"
+  elif [ -f "$(dirname "$SCRIPT_DIR")/whimpad.xml" ]; then
+    export WHIMPAD_CUSTOM_LAYOUT="$(dirname "$SCRIPT_DIR")/whimpad.xml"
+  fi
+fi
+
 # 1. 하단 보조화면 DSI-1 전원 켜기 및 Sway 전체화면 규칙 설정
 swaymsg output DSI-1 power on >/dev/null 2>&1
 swaymsg 'no_focus [app_id="whimpad"]' >/dev/null 2>&1 || true

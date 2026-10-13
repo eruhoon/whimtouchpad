@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<whimpad width="640" height="480">
+  <header>
+    <button x="397" y="6" w="54" h="54" id="Pad" icon="pad" />
+    <button x="457" y="6" w="54" h="54" id="Keys" icon="keys" />
+    <button x="517" y="6" w="54" h="54" id="Settings" icon="settings" />
+    <button x="577" y="6" w="54" h="54" id="Sleep" icon="sleep" />
+  </header>
+
+  <view id="pad">
+    <button x="9" y="400" w="257" h="76" id="L Click" />
+    <button x="275" y="400" w="90" h="76" id="Wheel" />
+    <button x="374" y="400" w="257" h="76" id="R Click" />
+  </view>
+
+  <view id="settings">
+    <button x="18" y="132" w="90" h="58" id="Gain-" />
+    <button x="532" y="132" w="90" h="58" id="Gain+" />
+    <button x="18" y="212" w="604" h="52" id="Natural" />
+    <button x="18" y="276" w="604" h="52" id="ScreenTimeout" />
+    <button x="18" y="365" w="604" h="68" id="Return" />
+  </view>
+
+  <view id="keys">
+    <keygrid start_x="7" start_y="66" width="626">
+      <row height="47">
+        <key id="Esc" />
+        <key id="F1" /><key id="F2" /><key id="F3" /><key id="F4" />
+        <key id="F5" /><key id="F6" /><key id="F7" /><key id="F8" />
+        <key id="F9" /><key id="F10" /><key id="F11" /><key id="F12" />
+      </row>
+      <row height="72">
+        <key id="`" /><key id="1" /><key id="2" /><key id="3" /><key id="4" />
+        <key id="5" /><key id="6" /><key id="7" /><key id="8" /><key id="9" />
+        <key id="0" /><key id="-" /><key id="=" /><key id="Back" weight="1.5" />
+      </row>
+      <row height="72">
+        <key id="Tab" />
+        <key id="q" /><key id="w" /><key id="e" /><key id="r" /><key id="t" />
+        <key id="y" /><key id="u" /><key id="i" /><key id="o" /><key id="p" />
+        <key id="[" /><key id="]" /><key id="\" />
+      </row>
+      <row height="72">
+        <key id="Caps" />
+        <key id="a" /><key id="s" /><key id="d" /><key id="f" /><key id="g" />
+        <key id="h" /><key id="j" /><key id="k" /><key id="l" /><key id=";" />
+        <key id="'" /><key id="Enter" weight="1.5" />
+      </row>
+      <row height="72">
+        <key id="Shift" weight="1.5" />
+        <key id="z" /><key id="x" /><key id="c" /><key id="v" /><key id="b" />
+        <key id="n" /><key id="m" /><key id="," /><key id="." /><key id="/" />
+        <key id="Shift" weight="1.5" />
+      </row>
+      <row height="75">
+        <key id="Ctrl" />
+        <key id="Alt" />
+        <key id="Space" weight="3.8" />
+        <key id="EN/KR" weight="1.05" />
+        <key id="Del" />
+        <key id="Home" />
+        <key id="End" />
+      </row>
+    </keygrid>
+  </view>
+</whimpad>

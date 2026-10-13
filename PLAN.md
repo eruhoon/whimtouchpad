@@ -108,3 +108,41 @@ whimtouchpad/
 | **Phase 2** | **초경량 렌더링 & UI 프로토타입** | - SDL2 또는 Framebuffer 기반 렌더링 루프 구현 (RAM < 15MB 타겟)<br>- 트랙패드 모드 및 키패드 그리드 모드 구현<br>- `config.json` 매핑 파서 |
 | **Phase 3** | **Linux uinput 가상 입력 엔진** | - `/dev/uinput` 마우스 상대이동/클릭 및 키보드 신호 방출 구현<br>- PortMaster 훅 스크립트(`whimtouchpad.sh`) 작성 |
 | **Phase 4** | **빌드 자동화 및 패키징 검증** | - `dist/whimtouchpad.zip` 생성 검증<br>- 마이너 버전 태그 자동 빌드/릴리즈 테스트 |
+
+---
+
+## 7. XML 기반 동적 레이아웃 & 커스텀 시스템 개발 계획
+
+> **상단 우측 밀착형 아이콘 바 & 게임별 특화 탭 동적 주입 시스템**
+
+### 7.1 상단 네비게이션 UI 구조 (640 × 480)
+- **기본 상태**: `[좌측 타이틀/상태]` ---------------- `[🖱️패드][⌨️키보드][⚙️설정][🌙슬립]` (4개 버튼)
+- **게임 특화 XML 감지 시**: `[🎮게임명/상태]` ------- `[🖱️패드][🎮특화][⌨️키보드][⚙️설정][🌙슬립]` (5개 버튼)
+
+### 7.2 마일스톤 및 단계별 검증 기준 (Definition of Done)
+
+- [x] **Phase 0: 기본 레이아웃 XML 추출 & 1:1 동등성 검증 (Regression Parity)**
+  - `template/layouts/default.xml` 작성 (기존 패드/키보드/설정 추출)
+  - `template/layout_loader.py` 기본 파서 작성 (`xml.etree.ElementTree`)
+  - `tests/test_parity.py` 작성: 기존 하드코딩 좌표와 XML 파싱 좌표의 1:1 전수 비교
+  - **완료 기준**: `python3 tests/test_parity.py` 실행 시 1픽셀 오차 없이 100% 일치 (`PASS` 완료)
+- [x] **Phase 1: 컨트롤러의 XML 레이아웃 연동 (하드코딩 제거)**
+  - `controller.py`의 `_build_cells()` 하드코딩 제거 및 `layout_loader` 호출 교체
+  - 60fps 렌더/터치 루프 무오버헤드를 위한 인메모리 캐싱
+  - **완료 기준**: 하드코딩 제거 상태에서 모든 기본 입력(패드, 키보드, 설정) 정상 동작 (`PASS` 완료)
+- [x] **Phase 2: 상단 네비게이션 ➔ 우측 밀착형 아이콘 바 개편**
+  - 상단 4개 아이콘 버튼(`[패드][키보드][설정][슬립]`) 우측 밀착 배치
+  - `ui.py`에 패드, 키보드 아이콘 렌더러 추가 및 활성 탭 하이라이트(`(35, 83, 67)`) 적용
+  - 좌측 상단 모드/상태 라벨 출력
+  - **완료 기준**: 4개 아이콘 터치 시 뷰 즉각 전환 및 활성 탭 하이라이트 정상 이동 (`PASS` 완료)
+- [x] **Phase 3: 게임 특화 XML 동적 주입 (Dynamic Injection)**
+  - `$GAMEDIR/whimpad.xml` 감지 시 상단 바에 `[🎮특화]` 탭 자동 삽입 (총 5개 버튼)
+  - `<button>` 절대 좌표 및 `<grid rows=... cols=...>` 자동 분할 그리드 지원
+  - 선언적 액션 디스패처: 단일 키(`key`), 조합 키(`combo`), 마우스 조작(`action`)
+  - 잘못된 XML 입력 시 기본 레이아웃으로 안전 복구(Fail-safe)
+  - **완료 기준**: 특화 XML 유무에 따라 4 ⇄ 5개 탭 정상 전환 및 커스텀 단축키 발송 확인 (`PASS` 완료)
+- [x] **Phase 4: 실환경 통합 및 빌드/패키징 검증**
+  - `scripts/test.mjs`에 단위 테스트 파이프라인 연동 (`pnpm test`)
+  - `pnpm run build` 번들링 무결성 검증
+  - **완료 기준**: `pnpm test` 및 `pnpm run build` 모두 정상 통과 (Exit Code 0, `PASS` 완료)
+

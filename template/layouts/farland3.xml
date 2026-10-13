@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 파랜드 오디세이 / 파랜드 택틱스 3 전용 커스텀 레이아웃 -->
+<layout id="custom" label="파랜드3" default="true">
+
+  <!-- 오른쪽 위: 특수 기능키 (몹 제거 / 몹 복구) -->
+  <button x="330" y="78" w="140" h="84" key="F12" label="몹 제거" />
+  <button x="485" y="78" w="140" h="84" key="F11" label="몹 복구" />
+
+  <!-- 밑에 주요 플레이 버튼 4개 (공격, 취소, 마법, 메뉴) -->
+  <button x="15" y="185" w="140" h="265" key="z" label="공격" />
+  <button x="170" y="185" w="140" h="265" key="x" label="취소" />
+  <button x="325" y="185" w="140" h="265" key="c" label="마법" />
+  <button x="480" y="185" w="145" h="265" key="Space" label="메뉴" />
+
+</layout>

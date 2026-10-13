@@ -213,6 +213,26 @@ def main():
                 rounded(x,y,w,h,rgb,7)
                 if k=='Wheel':
                     for offset in [-18,-9,0,9,18]:box(x+w/2-12,y+h/2+offset,24,2,(140,175,170))
+                elif k=='Pad':
+                    cx,cy=int(x+w/2),int(y+h/2)
+                    color(r,226,231,237,255)
+                    line(r,cx-12,cy-9,cx+12,cy-9);line(r,cx-12,cy+9,cx+12,cy+9)
+                    line(r,cx-12,cy-9,cx-12,cy+9);line(r,cx+12,cy-9,cx+12,cy+9)
+                    line(r,cx-12,cy+3,cx+12,cy+3);line(r,cx,cy+3,cx,cy+9)
+                elif k=='Keys':
+                    cx,cy=int(x+w/2),int(y+h/2)
+                    color(r,226,231,237,255)
+                    line(r,cx-13,cy-8,cx+13,cy-8);line(r,cx-13,cy+8,cx+13,cy+8)
+                    line(r,cx-13,cy-8,cx-13,cy+8);line(r,cx+13,cy-8,cx+13,cy+8)
+                    for dx in [-8,-3,2,7]:
+                        box(cx+dx,cy-4,2,2,(226,231,237))
+                        box(cx+dx,cy+1,2,2,(226,231,237))
+                    box(cx-5,cy+5,10,1,(226,231,237))
+                elif k=='Custom':
+                    cx,cy=int(x+w/2),int(y+h/2)
+                    box(cx-9,cy-3,18,6,(226,231,237))
+                    box(cx-3,cy-9,6,18,(226,231,237))
+                    box(cx-1,cy-1,2,2,(35,83,67) if selected else (27,34,44))
                 elif k=='Settings':
                     cx,cy=int(x+w/2),int(y+h/2)
                     # 정교한 기계식 톱니바퀴 (Gear / Cogwheel) 그리기
@@ -245,6 +265,14 @@ def main():
                 elif k not in ['L Click','R Click']:
                     if text:text(idle.label() if k=='ScreenTimeout' else ctl.label(k),x,y,w,h,(184,243,223) if selected else (226,231,237))
                     else:box(x+8,y+12,8,8,(185,215,210))
+            if text:
+                if ctl.mode=='pad':title='WhimPad  ·  터치패드'
+                elif ctl.mode=='keys':title=f"WhimPad  ·  가상 키보드 [{'한' if ctl.korean else '영'}]"
+                elif ctl.mode=='settings':title='WhimPad  ·  설정'
+                elif ctl.mode==getattr(ctl.loader,'custom_id','custom'):
+                    title=f"WhimPad  ·  {getattr(ctl.loader,'custom_title','게임 단축키')}"
+                else:title='WhimPad'
+                text(title,16,22,rgb=(160,185,205))
             if ctl.mode=='settings' and text:
                 text('커서 감도',22,91)
                 text(f'{ctl.gain:.1f} ×',115,132,410,58)

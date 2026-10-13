@@ -23,6 +23,9 @@ const requiredFiles = [
   'src/uinput.h',
   'template/whimpad.sh',
   'template/conf/config.json',
+  'template/layouts/default.xml',
+  'template/layouts/sample_rpg.xml',
+  'template/layout_loader.py',
   '.github/workflows/release.yml'
 ];
 
@@ -32,6 +35,17 @@ for (const file of requiredFiles) {
     console.error(`[test] Missing required file: ${file}`);
     process.exit(1);
   }
+}
+
+// 3. 레이아웃 회귀 동등성 및 단위 테스트 검증
+import { execSync } from 'node:child_process';
+try {
+  execSync('python3 tests/test_parity.py', { stdio: 'inherit' });
+  execSync('python3 tests/test_controller.py', { stdio: 'inherit' });
+  execSync('python3 tests/test_custom_layout.py', { stdio: 'inherit' });
+} catch (e) {
+  console.error('[test] Python unit tests failed');
+  process.exit(1);
 }
 
 console.log(`[test] All pre-flight tests passed for whimtouchpad v${pkg.version}`);

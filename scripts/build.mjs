@@ -39,6 +39,9 @@ try {
 // 2. Python 스크립트 복사
 fs.copyFileSync(path.join(SRC_DIR, 'controller.py'), path.join(TEMPLATE_DIR, 'controller.py'));
 fs.copyFileSync(path.join(SRC_DIR, 'gesture_manager.py'), path.join(TEMPLATE_DIR, 'gesture_manager.py'));
+if (fs.existsSync(path.join(SRC_DIR, 'layout_loader.py'))) {
+  fs.copyFileSync(path.join(SRC_DIR, 'layout_loader.py'), path.join(TEMPLATE_DIR, 'layout_loader.py'));
+}
 
 // 3. 패키징 (ZIP 생성: 폴더명 whimpad로 통일)
 const tagVersion = pkg.version.split('.').slice(0, 3).join('.');

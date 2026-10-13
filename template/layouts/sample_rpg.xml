@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WhimPad 게임 특화 커스텀 레이아웃 샘플 (RPG / 액션 게임용) -->
+<layout id="custom" label="RPG 단축키" default="true">
+
+  <!-- 1. 상단 주요 기능키 (절대 좌표 배치) -->
+  <button x="12" y="70" w="140" h="70" key="Esc" label="ESC (메뉴)" />
+  <button x="160" y="70" w="140" h="70" key="i" label="가방 (I)" />
+  <button x="308" y="70" w="140" h="70" key="m" label="지도 (M)" />
+  <button x="456" y="70" w="172" h="70" combo="Ctrl+S" label="저장 (Ctrl+S)" />
+
+  <!-- 2. 하단 스킬 및 단축키 (2행 4열 자동 분할 그리드) -->
+  <grid x="12" y="150" w="616" h="310" rows="2" cols="4" gap="10">
+    <!-- 1행: 숫자 스킬키 1, 2, 3, 4 -->
+    <button key="1" label="스킬 1" />
+    <button key="2" label="스킬 2" />
+    <button key="3" label="스킬 3" />
+    <button key="4" label="스킬 4" />
+
+    <!-- 2행: 기능키 F1, F2, Space, Enter -->
+    <button key="F1" label="물약 (F1)" />
+    <button key="F2" label="주문서 (F2)" />
+    <button key="Space" label="스페이스" />
+    <button key="Enter" label="엔터 (대화)" />
+  </grid>
+
+</layout>
