@@ -13,11 +13,53 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 
 static volatile sig_atomic_t g_running = 1;
 static int g_mouse_fd = -1;
 static int g_keyboard_fd = -1;
+static int g_touch_fd = -1;
+static int g_sock_fd = -1;
+static char g_sock_path[108] = {0};
 static int g_current_buttons = 0;
+
+static void cleanup_devices(void) {
+    static int cleaned = 0;
+    if (cleaned) return;
+    cleaned = 1;
+
+#ifdef __linux__
+    if (g_touch_fd >= 0) {
+        ioctl(g_touch_fd, EVIOCGRAB, 0);
+        close(g_touch_fd);
+        g_touch_fd = -1;
+    }
+    if (g_mouse_fd >= 0) {
+        emit_event(g_mouse_fd, EV_KEY, BTN_LEFT, 0);
+        emit_event(g_mouse_fd, EV_KEY, BTN_RIGHT, 0);
+        sync_event(g_mouse_fd);
+        ioctl(g_mouse_fd, UI_DEV_DESTROY);
+        close(g_mouse_fd);
+        g_mouse_fd = -1;
+    }
+    if (g_keyboard_fd >= 0) {
+        ioctl(g_keyboard_fd, UI_DEV_DESTROY);
+        close(g_keyboard_fd);
+        g_keyboard_fd = -1;
+    }
+#endif
+    if (g_sock_fd >= 0) {
+        close(g_sock_fd);
+        g_sock_fd = -1;
+    }
+    if (g_sock_path[0]) {
+        unlink(g_sock_path);
+        g_sock_path[0] = 0;
+    }
+    fprintf(stderr, "[whimtouchpad] Backend devices and touch grab released cleanly.\n");
+}
 
 static void handle_signal(int s) {
     (void)s;
@@ -163,23 +205,30 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[whimtouchpad] Bottom touchscreen device not found.\n");
         return 1;
     }
+    g_touch_fd = touch_fd;
 
     g_mouse_fd = create_uinput_device(0);
     g_keyboard_fd = create_uinput_device(1);
     if (g_mouse_fd < 0 || g_keyboard_fd < 0) {
         perror("[whimtouchpad] Failed to create uinput virtual device");
-        close(touch_fd);
+        cleanup_devices();
         return 1;
     }
 
 #ifdef __linux__
+    // 부모 프로세스(게임 스크립트) 비정상 종료 시 즉시 SIGTERM 수신하여 터치락 누수 방지
+    prctl(PR_SET_PDEATHSIG, SIGTERM);
+
     // 하단 터치스크린 이벤트를 독점(EVIOCGRAB)하여 데스크톱이나 메인 게임으로 직접 새지 않도록 캡처
     if (ioctl(touch_fd, EVIOCGRAB, 1)) {
         perror("[whimtouchpad] Failed to grab bottom touch device");
-        close(touch_fd);
+        cleanup_devices();
         return 1;
     }
 #endif
+
+    // 비정상/정상 종료 시 무조건 터치스크린 장치를 반환하도록 atexit 등록
+    atexit(cleanup_devices);
 
     // UNIX Domain Socket 설정 (UI 프로세스와의 IPC 통신)
     struct sockaddr_un in_addr = {.sun_family = AF_UNIX};
@@ -189,19 +238,29 @@ int main(int argc, char **argv) {
     snprintf(in_addr.sun_path, sizeof(in_addr.sun_path), "%s/input.sock", data_dir);
     snprintf(ui_addr.sun_path, sizeof(ui_addr.sun_path), "%s/ui.sock", data_dir);
     strncpy(in_sock_path, in_addr.sun_path, sizeof(in_sock_path) - 1);
+    strncpy(g_sock_path, in_sock_path, sizeof(g_sock_path) - 1);
 
     unlink(in_sock_path);
     int sock_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (sock_fd < 0 || bind(sock_fd, (void*)&in_addr, sizeof(in_addr)) != 0) {
         perror("[whimtouchpad] Failed to bind IPC socket");
+        cleanup_devices();
         return 1;
     }
+    g_sock_fd = sock_fd;
 
     struct sigaction sa = {0};
     sa.sa_handler = handle_signal;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGHUP, &sa, NULL);
+
+    int game_pid = 0;
+    const char *game_pid_env = getenv("GAME_PID");
+    if (game_pid_env && *game_pid_env) {
+        game_pid = atoi(game_pid_env);
+    }
 
     int max_x = get_abs_range(touch_fd, ABS_MT_POSITION_X);
     int max_y = get_abs_range(touch_fd, ABS_MT_POSITION_Y);
@@ -222,6 +281,18 @@ int main(int argc, char **argv) {
         int pr = poll(pfd, 2, 250);
         if (pr < 0) {
             if (errno == EINTR) continue;
+            break;
+        }
+
+        // 0. Watchdog: 부모 및 대상 게임 프로세스 생존 확인
+        if (getppid() == 1) {
+            fprintf(stderr, "[whimtouchpad] Parent process died (re-parented to init). Exiting.\n");
+            g_running = 0;
+            break;
+        }
+        if (game_pid > 0 && kill(game_pid, 0) == -1 && errno == ESRCH) {
+            fprintf(stderr, "[whimtouchpad] Monitored game process (%d) terminated. Exiting.\n", game_pid);
+            g_running = 0;
             break;
         }
 
@@ -305,27 +376,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    // 정리 및 해제
-#ifdef __linux__
-    if (g_mouse_fd >= 0) {
-        emit_event(g_mouse_fd, EV_KEY, BTN_LEFT, 0);
-        emit_event(g_mouse_fd, EV_KEY, BTN_RIGHT, 0);
-        sync_event(g_mouse_fd);
-        ioctl(g_mouse_fd, UI_DEV_DESTROY);
-        close(g_mouse_fd);
-    }
-    if (g_keyboard_fd >= 0) {
-        ioctl(g_keyboard_fd, UI_DEV_DESTROY);
-        close(g_keyboard_fd);
-    }
-    if (touch_fd >= 0) {
-        ioctl(touch_fd, EVIOCGRAB, 0);
-        close(touch_fd);
-    }
-#endif
-    if (sock_fd >= 0) close(sock_fd);
-    if (*in_sock_path) unlink(in_sock_path);
-
-    fprintf(stderr, "[whimtouchpad] Backend terminated cleanly.\n");
+    cleanup_devices();
     return 0;
 }

@@ -8,6 +8,7 @@ export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/var/run/0-runtime-dir}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export WHIMPAD_RUNTIME_DIR="/run/whimpad"
+export GAME_PID="${GAME_PID:-$$}"
 mkdir -p "$WHIMPAD_RUNTIME_DIR"
 
 # 게임 폴더 내의 커스텀 whimpad.xml 레이아웃 자동 감지

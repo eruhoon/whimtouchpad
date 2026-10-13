@@ -39,8 +39,8 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Build whimtouchpad package
-        run: pnpm run build
+      - name: Build whimtouchpad package (ARM64)
+        run: TARGET_ARCH=arm64 pnpm run build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

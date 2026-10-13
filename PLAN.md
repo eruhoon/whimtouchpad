@@ -146,3 +146,23 @@ whimtouchpad/
   - `pnpm run build` 번들링 무결성 검증
   - **완료 기준**: `pnpm test` 및 `pnpm run build` 모두 정상 통과 (Exit Code 0, `PASS` 완료)
 
+---
+
+## 8. v0.3.0 시스템 안정성, 패키징 권한 및 CI 크로스컴파일 강화
+
+- [x] **Task 1: C 백엔드 내구성 강화 (터치락 누수 방지 & Watchdog)**
+  - `prctl(PR_SET_PDEATHSIG, SIGTERM)` 적용으로 부모 프로세스(게임 셸) 비정상 종료 시 커널 레벨 자동 자멸
+  - `atexit(cleanup_devices)` 및 시그널 핸들러로 `ioctl(touch_fd, EVIOCGRAB, 0)` 해제 보장
+  - 부모 PID(`getppid() == 1`) 및 `GAME_PID` 생존 감시 워치독 루프 추가
+- [x] **Task 2: ZIP 패키징 UNIX 실행 권한(0755) 보존**
+  - `scripts/build.mjs`에서 `AdmZip` 생성 시 바이너리 및 셸 스크립트에 `0o755` (`0x031e` Unix made-by) 주입
+  - `scripts/test.mjs`에 ZIP 엔트리 권한 검증 테스트 추가
+- [x] **Task 3: CI 크로스 컴파일(ARM64) 파이프라인 무결성 확보**
+  - `.github/workflows/release.yml`에 `TARGET_ARCH=arm64` 명시 주입
+  - `scripts/build.mjs`에 ELF AArch64(0xB7) 바이너리 아키텍처 자동 검증 추가
+- [x] **Task 4: 코드베이스 SSOT(Single Source of Truth) 확립 및 레거시 정리**
+  - 모든 파이썬 실행 코드를 `src/`로 일원화하고 `build.mjs`에서 `template/`로 자동 동기화
+  - 레거시 C 파일(`main.c`, `uinput.c`, `uinput.h`)을 `src/legacy/`로 분리
+  - `template/whimpad.sh`를 trap cleanup 기반의 완전한 독립 런처로 정상화
+
+

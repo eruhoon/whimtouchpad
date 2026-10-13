@@ -1,29 +1,25 @@
 #!/bin/bash
 # ==============================================================================
-# WhimTouchpad - Secondary Screen Touchpad & Keypad Daemon
+# WhimPad - Secondary Screen Touchpad & Virtual Keypad (Standalone Runner)
 # ==============================================================================
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN="$SCRIPT_DIR/whimtouchpad"
 
-MODE="touchpad"
-SCREEN=1
+cleanup() {
+  echo "[whimpad] Shutting down WhimPad..."
+  if [ -f "$SCRIPT_DIR/whim_cleanup.sh" ]; then
+    source "$SCRIPT_DIR/whim_cleanup.sh"
+  fi
+  exit 0
+}
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --mode=*)
-      MODE="${1#*=}"
-      ;;
-    --screen=*)
-      SCREEN="${1#*=}"
-      ;;
-  esac
-  shift
-done
+trap cleanup INT TERM EXIT
 
-if [ -x "$BIN" ]; then
-  exec "$BIN" "--mode=$MODE" "--screen=$SCREEN"
+echo "[whimpad] Starting WhimPad standalone overlay..."
+source "$SCRIPT_DIR/whim_hook.sh"
+
+echo "[whimpad] Running... (Press Ctrl+C to stop)"
+if [ -n "$WHIM_UI_PID" ]; then
+  wait "$WHIM_UI_PID" 2>/dev/null || sleep infinity
 else
-  echo "[whimtouchpad] Binary not found or not executable: $BIN" >&2
-  exit 1
+  sleep infinity
 fi
