@@ -56,7 +56,7 @@ class Controller:
   if label=='Keys':self.mode='keys';self.buttons=0;self.mouse();return
   if label=='Custom':self.commit();self.mode=getattr(self.loader,'custom_id','custom');self.buttons=0;self.mouse();return
   if label=='Sleep':self.screen_sleep=True;return
-  action=self.loader.get_action(label) if hasattr(self.loader,'get_action') else None
+  action=self.loader.get_action(label) if (self.mode==getattr(self.loader,'custom_id','custom') and hasattr(self.loader,'get_action')) else None
   if action:
    if action.startswith('combo:'):self._send_combo(action[6:],t);return
    elif action.startswith('key:'):label=action[4:]
@@ -109,7 +109,7 @@ class Controller:
  def hit(self,x,y):
   return next((k for a,b,w,h,k in self.cells() if a<=x<a+w and b<=y<b+h),None)
  def label(self,k):
-  if hasattr(self.loader,'get_label'):
+  if self.mode==getattr(self.loader,'custom_id','custom') and hasattr(self.loader,'get_label'):
    custom_lbl=self.loader.get_label(k)
    if custom_lbl:return custom_lbl
   labels={'Pad':'터치패드','Keys':'키보드','Custom':getattr(self.loader,'custom_title','단축키'),'EN/KR':'한글' if self.korean else '영문','L Click':'좌클릭','R Click':'우클릭','Double':'더블클릭','Drag':'드래그','Back':'⌫','Space':'Space','Mode':'키보드로 전환' if self.mode=='pad' else '터치패드로 전환','Settings':'⚙','Return':'돌아가기','Gain-':'−','Gain+':'+','Natural':'자연스러운 스크롤  '+('켜짐' if self.natural else '꺼짐'),'Sleep':'×','Left':'←','Right':'→','Up':'↑','Down':'↓'}
