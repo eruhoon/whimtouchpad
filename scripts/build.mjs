@@ -43,6 +43,20 @@ if (fs.existsSync(path.join(SRC_DIR, 'layout_loader.py'))) {
   fs.copyFileSync(path.join(SRC_DIR, 'layout_loader.py'), path.join(TEMPLATE_DIR, 'layout_loader.py'));
 }
 
+// 스크립트 실행 권한 부여
+for (const sh of ['whim_hook.sh', 'whim_cleanup.sh', 'whimpad.sh']) {
+  const shPath = path.join(TEMPLATE_DIR, sh);
+  if (fs.existsSync(shPath)) {
+    fs.chmodSync(shPath, 0o755);
+  }
+}
+
+// 불필요한 __pycache__ 정리
+const pycacheDir = path.join(TEMPLATE_DIR, '__pycache__');
+if (fs.existsSync(pycacheDir)) {
+  fs.rmSync(pycacheDir, { recursive: true, force: true });
+}
+
 // 3. 패키징 (ZIP 생성: 폴더명 whimpad로 통일)
 const tagVersion = pkg.version.split('.').slice(0, 3).join('.');
 const zipName = `whimpad-v${tagVersion}.zip`;

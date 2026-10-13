@@ -32,6 +32,9 @@ class LayoutLoader:
             candidate = Path(gamedir) / 'whimpad.xml'
             if candidate.exists():
                 return candidate
+            candidate_nested = Path(gamedir) / 'whimpad' / 'whimpad.xml'
+            if candidate_nested.exists():
+                return candidate_nested
         conf_candidate = Path(__file__).parent / 'conf' / 'custom_layout.xml'
         if conf_candidate.exists():
             return conf_candidate

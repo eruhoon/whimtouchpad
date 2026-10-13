@@ -22,6 +22,8 @@ const requiredFiles = [
   'src/uinput.c',
   'src/uinput.h',
   'template/whimpad.sh',
+  'template/whim_hook.sh',
+  'template/whim_cleanup.sh',
   'template/conf/config.json',
   'template/layouts/default.xml',
   'template/layouts/sample_rpg.xml',

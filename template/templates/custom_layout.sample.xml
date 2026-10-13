@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WhimPad Game Custom Layout Sample
+  =================================
+  이 파일을 게임 데이터 디렉토리($GAMEDIR)에 "whimpad.xml"로 복사하여 게임 맞춤 단축키를 구성할 수 있습니다.
+  예: /roms/ports/stardewvalley/whimpad.xml
+
+  - id: 뷰 식별자 (보통 custom)
+  - title: 상단 탭에 노출될 텍스트 (예: 게임 조작, 단축키)
+  - button: 개별 버튼 정의
+    - label: 화면에 표시될 버튼 이름
+    - action: click(키/조합) | mouse_click(left/right/middle) | switch_view(pad/keys)
+-->
+<whimpad version="1.0">
+  <views>
+    <view id="custom" title="게임 단축키" default="true">
+      <grid cols="4" rows="4">
+        <!-- 1행: 메뉴 및 인벤토리 관련 -->
+        <button label="ESC" action="click(Esc)" col="0" row="0" span_x="1" span_y="1" />
+        <button label="인벤토리(I)" action="click(i)" col="1" row="0" span_x="1" span_y="1" />
+        <button label="지도(M)" action="click(m)" col="2" row="0" span_x="1" span_y="1" />
+        <button label="일지(J)" action="click(j)" col="3" row="0" span_x="1" span_y="1" />
+
+        <!-- 2행: 숫자 퀵슬롯 -->
+        <button label="1번 슬롯" action="click(1)" col="0" row="1" span_x="1" span_y="1" />
+        <button label="2번 슬롯" action="click(2)" col="1" row="1" span_x="1" span_y="1" />
+        <button label="3번 슬롯" action="click(3)" col="2" row="1" span_x="1" span_y="1" />
+        <button label="4번 슬롯" action="click(4)" col="3" row="1" span_x="1" span_y="1" />
+
+        <!-- 3행: 액션 키 -->
+        <button label="사용/대화(E)" action="click(e)" col="0" row="2" span_x="2" span_y="1" />
+        <button label="도구사용(F)" action="click(f)" col="2" row="2" span_x="2" span_y="1" />
+
+        <!-- 4행: 하단 마우스 클릭 -->
+        <button label="마우스 좌클릭" action="mouse_click(left)" col="0" row="3" span_x="2" span_y="1" />
+        <button label="마우스 우클릭" action="mouse_click(right)" col="2" row="3" span_x="2" span_y="1" />
+      </grid>
+    </view>
+  </views>
+</whimpad>

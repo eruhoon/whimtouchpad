@@ -25,49 +25,75 @@ RGDS 등 듀얼 스크린 Linux(Rocknix / PortMaster 환경) 휴대용 게임기
 
 ---
 
-## PortMaster 게임 연동 가이드
+## PortMaster 연동 및 설치 가이드 (공통 런타임 방식)
 
-기기에서 실행할 PortMaster 게임(예: `StardewValley` 등)에 WhimPad를 연동하는 2단계 방법입니다.
+WhimPad는 **공통 런타임 공유 방식**으로 배포되어, 게임마다 무거운 바이너리와 폰트를 중복 복사할 필요 없이 기기에 **단 1회만 설치**하면 모든 게임에서 공유할 수 있습니다.
 
-### 1단계: WhimPad 패키지 복사 및 권한 설정
-
-기기 게임 디렉토리 바로 아래에 `whimpad` 폴더를 생성하고, 패키지의 파일들을 복사합니다.
-
-```bash
-# [예시] Mac/PC 터미널에서 RGDS 기기로 복사 시
-scp -r template/* root@<기기_IP>:/roms/ports/<게임폴더명>/whimpad/
-```
-
-복사 후 기기 터미널(SSH)에서 실행 권한을 부여합니다:
-```bash
-chmod +x /roms/ports/<게임폴더명>/whimpad/whim_hook.sh
-chmod +x /roms/ports/<게임폴더명>/whimpad/whimpad_backend
+```text
+/roms/ports/
+├── whimpad/                          # [공통 런타임: 기기당 1회 설치]
+│   ├── whimpad_backend
+│   ├── whim_hook.sh
+│   ├── whim_cleanup.sh
+│   └── ...
+├── StardewValley.sh                  # 게임 런처 (공통 훅 연동)
+└── stardewvalley/
+    └── whimpad.xml                   # [게임별 단축키 레이아웃: 선택 사항]
 ```
 
 ---
 
-### 2단계: 게임 실행 스크립트(`.sh`) 수정
+### 1단계: WhimPad 공통 런타임 설치 (기기당 1회)
 
-게임의 실행 스크립트(예: `/roms/ports/StardewValley.sh`)를 열어 아래 2곳에 코드를 추가합니다.
+릴리즈 페이지에서 `whimpad-v*.zip`을 다운로드하여 기기의 `/roms/ports/`에 압축 해제합니다.
 
-#### ① 게임 실행 직전 (`$GAMEDIR/game.bin` 또는 게임 런처 실행 바로 윗줄):
+```bash
+# [예시] Mac/PC 터미널에서 RGDS 기기로 복사 시
+scp dist/whimpad-v*.zip root@<기기_IP>:/roms/ports/
+# 기기 SSH 접속 후 압축 해제 및 실행 권한 부여
+cd /roms/ports && unzip whimpad-v*.zip
+chmod +x /roms/ports/whimpad/whim_hook.sh
+chmod +x /roms/ports/whimpad/whim_cleanup.sh
+chmod +x /roms/ports/whimpad/whimpad_backend
+```
+
+> **버전 업데이트 시**: 새 버전 ZIP을 `/roms/ports/`에 덮어쓰기만 하면 설치된 모든 게임에 즉시 최신 WhimPad가 적용됩니다.
+
+---
+
+### 2단계: 게임 실행 스크립트(`.sh`) 연동
+
+원하는 게임의 런처 스크립트(예: `/roms/ports/StardewValley.sh`)를 열어 실행 직전과 직후에 훅을 추가합니다.
+
+#### ① 게임 바이너리 실행 직전:
 ```bash
 # === [WhimPad Hook Start] ===
-if [ -f "$GAMEDIR/whimpad/whim_hook.sh" ]; then
-  source "$GAMEDIR/whimpad/whim_hook.sh"
+WHIMPAD_DIR="/roms/ports/whimpad"
+[ -d "$WHIMPAD_DIR" ] || [ ! -d "/roms2/ports/whimpad" ] || WHIMPAD_DIR="/roms2/ports/whimpad"
+if [ -f "$WHIMPAD_DIR/whim_hook.sh" ]; then
+  source "$WHIMPAD_DIR/whim_hook.sh"
 fi
 # === [WhimPad Hook End] ===
 ```
 
-#### ② 게임 실행 직후 (스크립트 맨 끝 `exit 0` 바로 윗줄):
+#### ② 게임 실행 종료 직후 (`exit 0` 바로 윗줄):
 ```bash
 # === [WhimPad Cleanup] ===
-if [ -n "$WHIM_BACKEND_PID" ]; then kill $WHIM_BACKEND_PID 2>/dev/null || true; fi
-if [ -n "$WHIM_GESTURE_PID" ]; then kill $WHIM_GESTURE_PID 2>/dev/null || true; fi
-if [ -n "$WHIM_UI_PID" ]; then kill $WHIM_UI_PID 2>/dev/null || true; fi
-swaymsg output DSI-1 power off >/dev/null 2>&1 || true
+if [ -f "$WHIMPAD_DIR/whim_cleanup.sh" ]; then
+  source "$WHIMPAD_DIR/whim_cleanup.sh"
+fi
 # =========================
 ```
+
+*(자세한 예시는 `/roms/ports/whimpad/templates/game_hook_snippet.sh` 참고)*
+
+---
+
+### 3단계 (선택): 게임별 커스텀 단축키 레이아웃 구성
+
+특정 게임에 맞춘 전용 단축키 패널을 추가하고 싶다면, 게임 디렉토리(예: `/roms/ports/stardewvalley/whimpad.xml`)에 XML 파일을 배치하기만 하면 됩니다. WhimPad가 이를 자동 인식하여 상단 5번째 탭에 게임 전용 버튼들을 로드합니다.
+
+- 템플릿 파일: `/roms/ports/whimpad/templates/custom_layout.sample.xml` 복사 후 편집.
 
 ---
 

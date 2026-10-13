@@ -14,8 +14,12 @@ mkdir -p "$WHIMPAD_RUNTIME_DIR"
 if [ -z "$WHIMPAD_CUSTOM_LAYOUT" ]; then
   if [ -n "$GAMEDIR" ] && [ -f "$GAMEDIR/whimpad.xml" ]; then
     export WHIMPAD_CUSTOM_LAYOUT="$GAMEDIR/whimpad.xml"
+  elif [ -n "$GAMEDIR" ] && [ -f "$GAMEDIR/whimpad/whimpad.xml" ]; then
+    export WHIMPAD_CUSTOM_LAYOUT="$GAMEDIR/whimpad/whimpad.xml"
   elif [ -f "$(dirname "$SCRIPT_DIR")/whimpad.xml" ]; then
     export WHIMPAD_CUSTOM_LAYOUT="$(dirname "$SCRIPT_DIR")/whimpad.xml"
+  elif [ -f "$SCRIPT_DIR/whimpad.xml" ]; then
+    export WHIMPAD_CUSTOM_LAYOUT="$SCRIPT_DIR/whimpad.xml"
   fi
 fi
 
@@ -31,6 +35,7 @@ BACKEND_BIN="$SCRIPT_DIR/whimpad_backend"
 if [ -x "$BACKEND_BIN" ]; then
   "$BACKEND_BIN" "$WHIMPAD_RUNTIME_DIR" >/dev/null 2>&1 &
   export WHIM_BACKEND_PID=$!
+  echo "$WHIM_BACKEND_PID" > "$WHIMPAD_RUNTIME_DIR/backend.pid" 2>/dev/null || true
 fi
 
 # 3. 아름다운 가상 키패드 & 트랙패드 SDL2 그래픽 UI 실행 (타이틀 'whimpad' -> DSI-1 전체화면)
@@ -40,6 +45,7 @@ export SDL_APP_ID=whimpad
 
 python3 "$SCRIPT_DIR/ui.py" >/dev/null 2>&1 &
 export WHIM_UI_PID=$!
+echo "$WHIM_UI_PID" > "$WHIMPAD_RUNTIME_DIR/ui.pid" 2>/dev/null || true
 
 # 4. 하단 화면 안정화 및 전체화면 유지 백그라운드 가드
 # 게임 기동 시점(창 생성, 포커스 전환, Rocknix 기본 절전 등)의 레이스 컨디션을 방지하기 위해

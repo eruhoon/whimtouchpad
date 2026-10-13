@@ -81,5 +81,35 @@ class TestCustomLayoutSystem(unittest.TestCase):
         finally:
             broken_path.unlink(missing_ok=True)
 
+    def test_gamedir_resolution_order(self):
+        import os
+        import shutil
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            sample_xml = TEMPLATE_DIR / 'layouts' / 'sample_rpg.xml'
+
+            # 1. Test GAMEDIR / whimpad.xml
+            game_xml = Path(temp_dir) / 'whimpad.xml'
+            shutil.copyfile(sample_xml, game_xml)
+
+            os.environ['GAMEDIR'] = temp_dir
+            loader = LayoutLoader(TEMPLATE_DIR / 'layouts' / 'default.xml', custom_xml_path=None)
+            self.assertTrue(loader.has_custom)
+            self.assertEqual(loader.custom_title, 'RPG 단축키')
+
+            # 2. Test GAMEDIR / whimpad / whimpad.xml (nested fallback)
+            game_xml.unlink()
+            nested_dir = Path(temp_dir) / 'whimpad'
+            nested_dir.mkdir()
+            nested_xml = nested_dir / 'whimpad.xml'
+            shutil.copyfile(sample_xml, nested_xml)
+
+            loader2 = LayoutLoader(TEMPLATE_DIR / 'layouts' / 'default.xml', custom_xml_path=None)
+            self.assertTrue(loader2.has_custom)
+        finally:
+            os.environ.pop('GAMEDIR', None)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
 if __name__ == '__main__':
     unittest.main()
