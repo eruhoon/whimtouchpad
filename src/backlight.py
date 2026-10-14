@@ -12,6 +12,11 @@ class Backlight:
         self._lock = threading.Lock()
 
     def _find_sysfs_node(self):
+        # Explicit env override takes top priority
+        custom_node = os.environ.get("WHIMPAD_BOTTOM_BACKLIGHT")
+        if custom_node and Path(custom_node).exists():
+            return Path(custom_node)
+
         try:
             bl_dir = Path("/sys/class/backlight")
             if not bl_dir.exists():
@@ -19,11 +24,15 @@ class Backlight:
             nodes = [p for p in bl_dir.iterdir() if p.is_dir()]
             if not nodes:
                 return None
+            # CRITICAL: Only match nodes that explicitly designate the SECONDARY/BOTTOM panel.
+            # Never fall back to nodes[0] (which controls the primary/top game screen).
             for node in nodes:
                 name = node.name.lower()
-                if "dsi" in name or "panel" in name or "bottom" in name:
+                if any(k in name for k in ("pwm", "primary", "main", "top", "backlight-0")):
+                    continue
+                if any(k in name for k in ("dsi-1", "dsi1", "bottom", "secondary", "sub")):
                     return node
-            return nodes[0]
+            return None
         except Exception:
             return None
 
@@ -37,19 +46,20 @@ class Backlight:
 
     def _apply_power(self, power: bool):
         state = "on" if power else "off"
-        # 1. Sway Wayland output power toggle
-        try:
-            subprocess.run(
-                ["swaymsg", "output", self.output, "power", state],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-                timeout=1.0,
-            )
-        except Exception:
-            pass
+        # 1. Sway Wayland output power/dpms toggle (strictly targets secondary output e.g. DSI-1)
+        for cmd in ("dpms", "power"):
+            try:
+                subprocess.run(
+                    ["swaymsg", "output", self.output, cmd, state],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=1.0,
+                )
+            except Exception:
+                pass
 
-        # 2. Linux Sysfs backlight toggle (bl_power: 0=on, 1=off)
+        # 2. Linux Sysfs backlight toggle (ONLY if verified secondary screen node)
         if self.sysfs_node:
             try:
                 bl_power = self.sysfs_node / "bl_power"
@@ -57,6 +67,7 @@ class Backlight:
                     bl_power.write_text("0" if power else "1")
             except Exception:
                 pass
+
 
     def restore(self):
         """Ensure backlight is restored on shutdown/cleanup."""

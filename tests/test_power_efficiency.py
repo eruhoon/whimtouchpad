@@ -92,7 +92,15 @@ class TestPowerEfficiency(unittest.TestCase):
 
         # Wait briefly for worker thread execution
         time.sleep(0.05)
-        mock_run.assert_called_with(
+        # Should invoke both dpms and power on DSI-1
+        mock_run.assert_any_call(
+            ["swaymsg", "output", "DSI-1", "dpms", "off"],
+            stdout=unittest.mock.ANY,
+            stderr=unittest.mock.ANY,
+            check=False,
+            timeout=1.0,
+        )
+        mock_run.assert_any_call(
             ["swaymsg", "output", "DSI-1", "power", "off"],
             stdout=unittest.mock.ANY,
             stderr=unittest.mock.ANY,
@@ -104,7 +112,14 @@ class TestPowerEfficiency(unittest.TestCase):
         bl.restore()
         self.assertTrue(bl.powered)
         time.sleep(0.05)
-        mock_run.assert_called_with(
+        mock_run.assert_any_call(
+            ["swaymsg", "output", "DSI-1", "dpms", "on"],
+            stdout=unittest.mock.ANY,
+            stderr=unittest.mock.ANY,
+            check=False,
+            timeout=1.0,
+        )
+        mock_run.assert_any_call(
             ["swaymsg", "output", "DSI-1", "power", "on"],
             stdout=unittest.mock.ANY,
             stderr=unittest.mock.ANY,
@@ -112,5 +127,28 @@ class TestPowerEfficiency(unittest.TestCase):
             timeout=1.0,
         )
 
+    def test_backlight_never_targets_primary_screen(self):
+        from pathlib import Path
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a mock /sys/class/backlight with primary screen nodes only
+            bl_dir = Path(tmpdir) / "backlight"
+            bl_dir.mkdir()
+            (bl_dir / "pwm-backlight").mkdir()
+            (bl_dir / "backlight-0").mkdir()
+
+            with patch('backlight.Path') as mock_path:
+                def fake_path(p):
+                    if str(p) == "/sys/class/backlight":
+                        return bl_dir
+                    return Path(p)
+                mock_path.side_effect = fake_path
+
+                bl = Backlight(output="DSI-1")
+                # Must be None, never pwm-backlight or backlight-0!
+                self.assertIsNone(bl._find_sysfs_node())
+
 if __name__ == '__main__':
     unittest.main()
+
