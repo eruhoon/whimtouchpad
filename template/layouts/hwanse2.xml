@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 환세취호전 (Hwanse2) 전용 커스텀 레이아웃 -->
+<layout id="custom" label="환세2" default="true">
+
+  <!-- 오른쪽 위: 빠른 저장 / 불러오기 단축키 -->
+  <button x="330" y="78" w="140" h="84" key="s" label="저장 (S)" />
+  <button x="485" y="78" w="140" h="84" key="l" label="로드 (L)" />
+
+  <!-- 밑에 주요 플레이 버튼 4개 (결정, 취소, 달리기, 상태/메뉴) -->
+  <button x="15" y="185" w="140" h="265" key="Enter" label="결정" />
+  <button x="170" y="185" w="140" h="265" key="Esc" label="취소" />
+  <button x="325" y="185" w="140" h="265" key="Shift" label="달리기" />
+  <button x="480" y="185" w="145" h="265" key="c" label="상태/메뉴" />
+
+</layout>
