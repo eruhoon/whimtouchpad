@@ -13,6 +13,7 @@ class LayoutLoader:
         self.icons = {}
         self.actions = {}
         self.labels = {}
+        self.button_meta = {}
         self.has_custom = False
         self.custom_id = 'custom'
         self.custom_title = '게임 단축키'
@@ -47,6 +48,7 @@ class LayoutLoader:
         self.icons = {}
         self.actions = {}
         self.labels = {}
+        self.button_meta = {}
         self.has_custom = False
         self.default_view = 'pad'
 
@@ -181,6 +183,42 @@ class LayoutLoader:
         elif btn.get('combo'): self.actions[key_id] = f'combo:{btn.get("combo")}'
         elif btn.get('action'): self.actions[key_id] = btn.get('action')
 
+        b_type = btn.get('type', 'tap').lower()
+        if btn.get('macro'):
+            b_type = 'macro'
+            self.actions[key_id] = f'macro:{btn.get("macro")}'
+        elif btn.get('sequence'):
+            b_type = 'macro'
+            self.actions[key_id] = f'macro:{btn.get("sequence")}'
+        elif self.actions.get(key_id, '').startswith('macro:'):
+            b_type = 'macro'
+
+        macro_seq = btn.get('sequence') or btn.get('macro')
+        if not macro_seq and self.actions.get(key_id, '').startswith('macro:'):
+            macro_seq = self.actions[key_id][6:]
+
+        try:
+            hold_time = float(btn.get('hold_time', 450)) / 1000.0
+        except ValueError:
+            hold_time = 0.45
+
+        try:
+            interval = float(btn.get('interval', 60)) / 1000.0
+        except ValueError:
+            interval = 0.06
+
+        self.button_meta[key_id] = {
+            'type': b_type,
+            'key': btn.get('key'),
+            'combo': btn.get('combo'),
+            'action': self.actions.get(key_id),
+            'hold_action': btn.get('hold_action'),
+            'hold_time': hold_time,
+            'hold_label': btn.get('hold_label'),
+            'sequence': macro_seq,
+            'interval': interval,
+        }
+
         return (x, y, w, h, key_id)
 
     def get_cells(self, mode):
@@ -194,3 +232,9 @@ class LayoutLoader:
 
     def get_action(self, key_id):
         return self.actions.get(key_id)
+
+    def get_button_meta(self, key_id):
+        return self.button_meta.get(key_id, {})
+
+    def get_type(self, key_id):
+        return self.button_meta.get(key_id, {}).get('type', 'tap')

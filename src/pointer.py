@@ -54,7 +54,12 @@ class Pointer:
  def refresh(self):
   outputs=self.ipc.request(3)
   output=next((o for o in outputs if o['name']==self.top and o.get('active')),None)
-  if not output:raise OSError('Upper output unavailable: '+self.top)
+  if not output:
+   active_outs=sorted([o for o in outputs if o.get('active')], key=lambda o: (o.get('rect',{}).get('y',0), o.get('rect',{}).get('x',0)))
+   if active_outs:
+    output=active_outs[0]
+    self.top=output['name']
+  if not output:raise OSError('Upper output unavailable: '+str(self.top))
   self.rect=output['rect']
   self.active_seats={s['name'] for s in self.ipc.request(101)}
  def es_context(self):

@@ -29,8 +29,13 @@ fi
 pkill -f "python3.*ui.py" 2>/dev/null || true
 pkill -f "whimpad_backend" 2>/dev/null || true
 
-# 2. 하단 보조화면 DSI-1 전원 끄기
-swaymsg output DSI-1 power off >/dev/null 2>&1 || true
+# 2. 하단 보조화면 전원 끄기 (동적 감지된 커넥터 지원)
+BOTTOM_OUT="$WHIMPAD_BOTTOM_OUTPUT"
+if [ -z "$BOTTOM_OUT" ] && [ -f "$WHIMPAD_RUNTIME_DIR/bottom_output" ]; then
+  BOTTOM_OUT="$(cat "$WHIMPAD_RUNTIME_DIR/bottom_output" 2>/dev/null)"
+fi
+BOTTOM_OUT="${BOTTOM_OUT:-DSI-1}"
+swaymsg output "$BOTTOM_OUT" power off >/dev/null 2>&1 || true
 
 # 3. 런타임 임시 디렉토리 정리
 rm -rf "$WHIMPAD_RUNTIME_DIR" 2>/dev/null || true

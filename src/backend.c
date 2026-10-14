@@ -148,12 +148,40 @@ static int is_multitouch_screen(int fd) {
            get_abs_range(fd, ABS_MT_SLOT) > 0;
 }
 
+static int score_touch_device(const char *path, const char *name, const char *real_dev_path, int has_slot, const char *manual) {
+    if (manual && *manual) {
+        if (!strcmp(manual, path)) return 10000;
+        return -100;
+    }
+    int score = 10;
+    if (has_slot) score += 50;
+    if (real_dev_path && strstr(real_dev_path, "fe5e0000")) score += 500;
+    if (name && (strcasestr(name, "bottom") || strcasestr(name, "lower"))) score += 200;
+    if (real_dev_path && strcasestr(real_dev_path, "dsi-1")) score += 200;
+    if (name && (strcasestr(name, "goodix") || strcasestr(name, "gt9") || strcasestr(name, "gt1"))) score += 100;
+    if (real_dev_path && strcasestr(real_dev_path, "goodix")) score += 100;
+    if (name && (strcasestr(name, "focaltech") || strcasestr(name, "ft5") || strcasestr(name, "edt-ft"))) score += 100;
+    if (real_dev_path && strcasestr(real_dev_path, "focaltech")) score += 100;
+    if (name && (strcasestr(name, "gsl") || strcasestr(name, "silead") || strcasestr(name, "chipone") || strcasestr(name, "ilitek"))) score += 100;
+    if (name && strcasestr(name, "touchscreen")) score += 50;
+    if (name && (strcasestr(name, "top") || strcasestr(name, "upper"))) score -= 200;
+    return score;
+}
+
 /**
- * 하단 터치스크린 디바이스 전용 검색 및 개방 (fe5e0000 필터링 & EVIOCGRAB)
+ * 하단 터치스크린 디바이스 다계층 자동 탐색 (우선순위 스코어링 & EVIOCGRAB)
  */
 static int open_bottom_touchscreen(const char *manual_device, int list_only) {
 #ifdef __linux__
-    int selected = -1;
+    struct {
+        int fd;
+        char path[64];
+        char name[128];
+        char real_dev_path[1024];
+        int score;
+    } candidates[32];
+    int candidate_count = 0;
+
     for (int i = 0; i < 64; i++) {
         char path[64], syspath[128], real_dev_path[1024] = {0}, name[128] = {0};
         snprintf(path, sizeof(path), "/dev/input/event%d", i);
@@ -164,22 +192,48 @@ static int open_bottom_touchscreen(const char *manual_device, int list_only) {
         if (!realpath(syspath, real_dev_path)) real_dev_path[0] = 0;
         ioctl(fd, EVIOCGNAME(sizeof(name)), name);
 
-        if (is_multitouch_screen(fd)) {
+        int has_mt = (get_abs_range(fd, ABS_MT_POSITION_X) > 0 && get_abs_range(fd, ABS_MT_POSITION_Y) > 0);
+        int has_slot = (get_abs_range(fd, ABS_MT_SLOT) > 0);
+        int has_single = (get_abs_range(fd, ABS_X) > 0 && get_abs_range(fd, ABS_Y) > 0);
+
+        if (has_mt || has_single) {
+            int score = score_touch_device(path, name, real_dev_path, has_slot, manual_device);
             if (list_only) {
-                printf("%s | %s | %s\n", path, name, real_dev_path);
-            } else if (selected < 0) {
-                // 수동 지정 또는 RGDS 하단 터치 전용 I2C 컨트롤러(fe5e0000) 자동 매칭
-                if ((manual_device && *manual_device && !strcmp(manual_device, path)) ||
-                    ((!manual_device || !*manual_device) && strstr(real_dev_path, "fe5e0000"))) {
-                    selected = fd;
-                    fprintf(stderr, "[whimtouchpad] Attached to bottom touchscreen: %s (%s)\n", path, real_dev_path);
-                    continue; // 닫지 않고 유지
-                }
+                printf("%s | %s | %s | score=%d%s\n", path, name, real_dev_path, score, has_mt ? " (multitouch)" : "");
+                close(fd);
+            } else if (score >= 0 && candidate_count < 32) {
+                candidates[candidate_count].fd = fd;
+                strncpy(candidates[candidate_count].path, path, sizeof(candidates[candidate_count].path) - 1);
+                strncpy(candidates[candidate_count].name, name, sizeof(candidates[candidate_count].name) - 1);
+                strncpy(candidates[candidate_count].real_dev_path, real_dev_path, sizeof(candidates[candidate_count].real_dev_path) - 1);
+                candidates[candidate_count].score = score;
+                candidate_count++;
+            } else {
+                close(fd);
             }
+        } else {
+            close(fd);
         }
-        close(fd);
     }
-    return selected;
+
+    if (list_only) return 0;
+    if (candidate_count == 0) return -1;
+
+    int best_idx = 0;
+    for (int i = 1; i < candidate_count; i++) {
+        if (candidates[i].score > candidates[best_idx].score) {
+            best_idx = i;
+        }
+    }
+
+    int selected_fd = candidates[best_idx].fd;
+    fprintf(stderr, "[whimtouchpad] Attached to bottom touchscreen: %s (%s, score=%d)\n",
+            candidates[best_idx].path, candidates[best_idx].name, candidates[best_idx].score);
+
+    for (int i = 0; i < candidate_count; i++) {
+        if (i != best_idx) close(candidates[i].fd);
+    }
+    return selected_fd;
 #else
     (void)manual_device; (void)list_only;
     return 0;
@@ -198,7 +252,8 @@ int main(int argc, char **argv) {
     }
 
     const char *data_dir = argv[1];
-    const char *manual_touch = argc > 2 ? argv[2] : NULL;
+    const char *manual_touch = argc > 2 ? argv[2] : getenv("WHIMPAD_TOUCH_DEV");
+    if (manual_touch && !*manual_touch) manual_touch = NULL;
 
     int touch_fd = open_bottom_touchscreen(manual_touch, 0);
     if (touch_fd < 0) {

@@ -185,5 +185,30 @@ whimtouchpad/
   - `tests/test_power_efficiency.py` 추가: 적응형 타임아웃 상태 전이, 백라이트 디스패치 및 `ScreenIdle` 연동 검증
   - `scripts/test.mjs` 및 `scripts/build.mjs` 파이프라인 연동 확인
 
+---
+
+## 10. v0.4.0 하드웨어 자동 탐색 추상화 및 고급 입력 액션 엔진
+
+- [x] **Task 1: 디스플레이 커넥터 자동 탐색 및 동적 타겟팅**
+  - `DSI-1` / `DSI-2` 하드코딩 제거: Sway IPC `GET_OUTPUTS`를 통한 y좌표 기반 상단(최소 y) / 하단(최대 y) 자동 선출
+  - `template/whim_hook.sh`, `template/whim_cleanup.sh`에 `WHIMPAD_BOTTOM_OUTPUT` 동적 주입 및 런타임 캐싱
+  - `src/pointer.py`에 상단 디스플레이 미발견 시 자동 탐색 안전 폴백 구현
+- [x] **Task 2: 터치스크린 디바이스 다계층 우선순위 자동 탐색 (`src/backend.c`)**
+  - `fe5e0000` 단일 매칭 탈피: 명시적 환경변수(`WHIMPAD_TOUCH_DEV`) ➔ 하드웨어 시그니처 매칭 ➔ 단일/멀티터치 자동 선출 스코어링 시스템 구축
+  - `--list` CLI 플래그 강화로 연결된 터치 입력 장치의 해상도 및 매칭 스코어 상세 출력 지원
+- [x] **Task 3: Layout Spec v2.0 및 LayoutLoader 메타데이터 확장 (`src/layout_loader.py`)**
+  - `<button>` 속성 확장: `type` (tap, toggle, hold, turbo, macro), `hold_action`, `hold_time`, `hold_label`, `sequence`, `interval`
+  - `macro="..."`, `sequence="..."`, `action="macro:..."` 선언적 구문 파싱 및 `button_meta` 등록
+- [x] **Task 4: Controller 상태 머신 및 순차 매크로(Sequential Macro) 엔진 (`src/controller.py`)**
+  - **Toggle**: 키 누름 유지 및 UI 하이라이트 동기화, 재터치 시 릴리즈
+  - **Hold**: 터치 다운 시 키 다운, 터치 업 시 릴리즈 (지속 누름)
+  - **Long-press**: `hold_time` 기반 일반 탭과 롱프레스 액션 분기 처리
+  - **Turbo**: 터치 유지 동안 `interval` 주기별 연속 키 입력 반복
+  - **Sequential Macro**: `_send_macro()` 비동기 큐(`self.schedule`)로 정해진 타이밍에 키 다운/업 및 `wait:N` 딜레이를 논블로킹 순차 방출
+  - `close()` 시 활성화된 모든 토글 및 홀드 키 자동 해제 보장
+- [x] **Task 5: 회귀 무결성 및 단위 테스트 파이프라인 검증**
+  - `tests/test_custom_layout.py` 및 `tests/test_controller.py`에 Toggle, Hold, Long-press, Macro, Turbo 전수 단위 테스트 추가
+  - `pnpm test` 및 `pnpm run build` 전체 통과 검증 완료
+
 
 

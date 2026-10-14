@@ -73,5 +73,31 @@ class TestControllerBehavior(unittest.TestCase):
         self.ctl.tick(1.1)
         self.assertTrue(any('k 1 0' in m for m in self.sent), "Key release not sent")
 
+    def test_direct_macro_dispatch(self):
+        self.sent.clear()
+        self.ctl._send_macro("Up,wait:100,Space", t=1.0, interval=0.05)
+        # First key at 1.0
+        self.ctl.tick(1.0)
+        self.assertIn('k 103 1', self.sent) # Up (103) down
+        self.ctl.tick(1.03)
+        self.assertIn('k 103 0', self.sent) # Up up
+        # wait:100ms -> next key at 1.0 + 0.05 + 0.10 = 1.15
+        self.sent.clear()
+        self.ctl.tick(1.10)
+        self.assertEqual(len(self.sent), 0)
+        self.ctl.tick(1.15)
+        self.assertIn('k 57 1', self.sent) # Space (57) down
+
+    def test_toggle_and_hold_cleanup_on_close(self):
+        # Set active toggle and hold
+        self.ctl.toggle_states['custom_toggle'] = True
+        self.ctl.active_holds.add(('custom_hold', 29)) # Ctrl held
+        self.sent.clear()
+        self.ctl.close()
+        # Must release Ctrl (29)
+        self.assertTrue(any('k 29 0' in m for m in self.sent))
+        self.assertEqual(len(self.ctl.toggle_states), 0)
+        self.assertEqual(len(self.ctl.active_holds), 0)
+
 if __name__ == '__main__':
     unittest.main()

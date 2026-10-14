@@ -24,11 +24,62 @@ if [ -z "$WHIMPAD_CUSTOM_LAYOUT" ]; then
   fi
 fi
 
-# 1. 하단 보조화면 DSI-1 전원 켜기 및 Sway 전체화면 규칙 설정
-swaymsg output DSI-1 power on >/dev/null 2>&1
+# 디스플레이 자동 탐색 추상화 (Sway IPC 기반 상/하단 커넥터 감지 및 환경변수 주입)
+if [ -z "$WHIMPAD_BOTTOM_OUTPUT" ] || [ -z "$WHIMPAD_TOP_OUTPUT" ]; then
+  EVAL_OUT=$(python3 - << 'EOF'
+import os, socket, struct, json
+
+swaysock = os.environ.get("SWAYSOCK", "/var/run/0-runtime-dir/sway-ipc.0.sock")
+bottom_out = os.environ.get("WHIMPAD_BOTTOM_OUTPUT", "")
+top_out = os.environ.get("WHIMPAD_TOP_OUTPUT", "")
+
+if (not bottom_out or not top_out) and os.path.exists(swaysock):
+    try:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(1)
+        s.connect(swaysock)
+        s.sendall(b'i3-ipc\x00\x00\x00\x00\x03\x00\x00\x00')
+        header = s.recv(14)
+        if len(header) == 14 and header[:6] == b'i3-ipc':
+            size = struct.unpack('=II', header[6:])[0]
+            data = b''
+            while len(data) < size:
+                chunk = s.recv(size - len(data))
+                if not chunk: break
+                data += chunk
+            outputs = [o for o in json.loads(data.decode()) if o.get('active')]
+            if outputs:
+                # Sort by y coordinate: top has minimum y, bottom has maximum y
+                outputs.sort(key=lambda o: (o.get('rect', {}).get('y', 0), o.get('rect', {}).get('x', 0)))
+                if not top_out:
+                    top_out = outputs[0].get('name', 'DSI-2')
+                if not bottom_out:
+                    bottom_out = outputs[-1].get('name', 'DSI-1')
+        s.close()
+    except Exception:
+        pass
+
+if not top_out: top_out = "DSI-2"
+if not bottom_out: bottom_out = "DSI-1"
+
+print(f'export WHIMPAD_TOP_OUTPUT="{top_out}"; export WHIMPAD_BOTTOM_OUTPUT="{bottom_out}";')
+EOF
+  2>/dev/null)
+  if [ -n "$EVAL_OUT" ]; then
+    eval "$EVAL_OUT"
+  fi
+fi
+
+export WHIMPAD_BOTTOM_OUTPUT="${WHIMPAD_BOTTOM_OUTPUT:-DSI-1}"
+export WHIMPAD_TOP_OUTPUT="${WHIMPAD_TOP_OUTPUT:-DSI-2}"
+echo "$WHIMPAD_BOTTOM_OUTPUT" > "$WHIMPAD_RUNTIME_DIR/bottom_output" 2>/dev/null || true
+echo "$WHIMPAD_TOP_OUTPUT" > "$WHIMPAD_RUNTIME_DIR/top_output" 2>/dev/null || true
+
+# 1. 하단 보조화면 전원 켜기 및 Sway 전체화면 규칙 설정
+swaymsg output "$WHIMPAD_BOTTOM_OUTPUT" power on >/dev/null 2>&1
 swaymsg 'no_focus [app_id="whimpad"]' >/dev/null 2>&1 || true
 swaymsg 'for_window [app_id="whimpad"] floating enable' >/dev/null 2>&1 || true
-swaymsg 'for_window [app_id="whimpad"] move container to output DSI-1' >/dev/null 2>&1 || true
+swaymsg "for_window [app_id=\"whimpad\"] move container to output $WHIMPAD_BOTTOM_OUTPUT" >/dev/null 2>&1 || true
 swaymsg 'for_window [app_id="whimpad"] fullscreen enable' >/dev/null 2>&1 || true
 
 # 2. 고속 C 백엔드 데몬 실행 (하단 터치 독점 grab & uinput 장치 등록)
@@ -54,8 +105,8 @@ echo "$WHIM_UI_PID" > "$WHIMPAD_RUNTIME_DIR/ui.pid" 2>/dev/null || true
 (
   for i in $(seq 1 20); do
     sleep 0.3
-    swaymsg output DSI-1 power on >/dev/null 2>&1
-    swaymsg '[app_id="whimpad"] move container to output DSI-1' >/dev/null 2>&1 || swaymsg '[title="whimpad"] move container to output DSI-1' >/dev/null 2>&1
+    swaymsg output "$WHIMPAD_BOTTOM_OUTPUT" power on >/dev/null 2>&1
+    swaymsg "[app_id=\"whimpad\"] move container to output $WHIMPAD_BOTTOM_OUTPUT" >/dev/null 2>&1 || swaymsg "[title=\"whimpad\"] move container to output $WHIMPAD_BOTTOM_OUTPUT" >/dev/null 2>&1
     swaymsg '[app_id="whimpad"] fullscreen enable' >/dev/null 2>&1 || swaymsg '[title="whimpad"] fullscreen enable' >/dev/null 2>&1
   done
 ) &
