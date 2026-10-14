@@ -20,6 +20,7 @@ const requiredFiles = [
   'scripts/build.mjs',
   'scripts/clean.mjs',
   'src/backend.c',
+  'src/backlight.py',
   'src/controller.py',
   'src/ui.py',
   'src/layout_loader.py',
@@ -48,6 +49,7 @@ try {
   execSync('python3 tests/test_parity.py', { stdio: 'inherit' });
   execSync('python3 tests/test_controller.py', { stdio: 'inherit' });
   execSync('python3 tests/test_custom_layout.py', { stdio: 'inherit' });
+  execSync('python3 tests/test_power_efficiency.py', { stdio: 'inherit' });
 } catch (e) {
   console.error('[test] Python unit tests failed');
   process.exit(1);

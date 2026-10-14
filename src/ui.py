@@ -7,6 +7,7 @@ import sys
 import time
 import signal
 import socket
+import select
 import math
 from render_cache import TextureCache,corner_insets
 from controller import Controller
@@ -14,6 +15,23 @@ from unicode_input import UnicodeInput
 from pathlib import Path
 import json
 from screen_idle import ScreenIdle,TIMES
+from backlight import Backlight
+
+def calc_adaptive_timeout(now, last_active, is_blank, has_pending, next_due=None):
+    """Calculate the next select/sleep timeout in seconds.
+    - SLEEP: 0.5s (responsive to touch interrupts, 0 CPU).
+    - ACTIVE: 1/60s (or pending deadline) for smooth 60 FPS.
+    - IDLE: 0.3s (~3 FPS) to drop CPU usage under 1%.
+    """
+    if is_blank:
+        return 0.5, False
+    if has_pending and next_due is not None:
+        delay = max(0.001, min(1/60, next_due - now))
+        return delay, True
+    if now - last_active < 1.0:
+        return 1/60, True
+    return 0.3, False
+
 
 class Rect(C.Structure):
     _fields_=[('x',C.c_int),('y',C.c_int),('w',C.c_int),('h',C.c_int)]
@@ -145,10 +163,11 @@ def main():
     except Exception as e:print('Korean input unavailable:',e,flush=True)
     gain=float(os.environ.get('WHIMPAD_GAIN',os.environ.get('DUOPAD_GAIN','1.5')))
     ctl=Controller(send,unicode=unicode,clock=time.monotonic,gain=gain)
+    backlight=Backlight()
     options=base/'panel-options.json'
     try:timeout=json.loads(options.read_text()).get('screen_timeout',30)
     except (OSError,ValueError):timeout=30
-    idle=ScreenIdle(time.monotonic(),timeout)
+    idle=ScreenIdle(time.monotonic(),timeout,on_power_change=backlight.set_power)
     ready=base/'ui.ready';first_frame=True
     print('WhimPad SDL view ready',flush=True)
     def box(x,y,w,h,rgb):
@@ -159,10 +178,23 @@ def main():
         for dy,inset in enumerate(corner_insets(radius)):
             box(x+inset,y+dy,w-2*inset,1,rgb)
             box(x+inset,y+h-dy-1,w-2*inset,1,rgb)
+    dirty=True;was_blank=False;last_render=0;last_active=time.monotonic()
     try:
         while running and not ctl.finished:
+            now=time.monotonic()
+            has_pending=bool(ctl.pending)
+            next_due=min((x[0] for x in ctl.pending),default=None) if has_pending else None
+            if ctl.count or ctl.buttons or has_pending:
+                last_active=now
+
+            timeout_sec,is_active=calc_adaptive_timeout(now,last_active,idle.blank,has_pending,next_due)
+
+            try:select.select([channel],[],[],timeout_sec)
+            except (OSError,ValueError):pass
+
             while poll(event):
                 if int.from_bytes(event.raw[:4],sys.byteorder)==0x100:running=False
+            had_touch=False
             while True:
                 try:data=channel.recv(256).decode().split()
                 except BlockingIOError:break
@@ -175,11 +207,14 @@ def main():
                     if unicode:
                         try:unicode.prepare()
                         except Exception as error:print('Text reconnect after game:',error,flush=True)
+                    dirty=True;last_active=time.monotonic()
                     print('Touch controller reset after game return',flush=True)
                 if len(data)==5 and data[0]=='t':
+                    had_touch=True;last_active=time.monotonic();dirty=True
                     touch_frames+=1;touch_contacts+=int(data[1])>0
                     n,x,y=int(data[1]),float(data[2]),float(data[3])
-                    if idle.consume(n,time.monotonic()):continue
+                    if idle.consume(n,time.monotonic()):
+                        dirty=True;continue
                     if n and not ctl.count and ctl.hit(x,y)=='ScreenTimeout':
                         idle.cycle(time.monotonic())
                         try:
@@ -187,6 +222,7 @@ def main():
                             temporary.write_text(json.dumps({'screen_timeout':idle.timeout}))
                             temporary.replace(options)
                         except OSError as error:print('Screen timeout save failed:',error,flush=True)
+                        dirty=True
                     ctl.frame(n,x,y,float(data[4]))
                     if getattr(ctl,'screen_sleep',False):
                         ctl.screen_sleep=False
@@ -195,13 +231,33 @@ def main():
                 ctl.screen_sleep=False
                 idle.blank=True
             ctl.tick(time.monotonic())
+            if had_touch or ctl.count or ctl.buttons or ctl.pending:
+                dirty=True
             if time.monotonic()-last_stats>=10:
                 last_stats=time.monotonic()
                 if pointer:refresh_pointer(pointer)
                 print(f'Input stats: frames={touch_frames} contacts={touch_contacts} pointer={pointer.events if pointer else "uinput"}',flush=True)
+
+            is_blank=idle.tick(time.monotonic(),bool(ctl.count or ctl.buttons or ctl.pending))
+            if is_blank:
+                if not was_blank:
+                    was_blank=True
+                    color(r,0,0,0,255);clear(r);present(r)
+                dirty=False
+                continue
+
+            if was_blank:
+                was_blank=False
+                dirty=True
+
+            now_render=time.monotonic()
+            if not dirty and (now_render-last_render<1.0):
+                continue
+            dirty=False
+            last_render=now_render
+
             color(r,0,0,0,255);clear(r)
-            if idle.tick(time.monotonic(),bool(ctl.count or ctl.buttons or ctl.pending)):
-                present(r);time.sleep(1/60);continue
+
             if ctl.mode=='pad':
                 rounded(12,68,616,322,(41,54,64),12)
                 rounded(13,69,614,320,(16,22,29),11)
@@ -279,8 +335,9 @@ def main():
                 text('휠 또는 두 손가락으로 스크롤',22,340)
             present(r)
             if first_frame:ready.write_text('0.5.9');first_frame=False
-            time.sleep(1/60)
     finally:
+        try:backlight.restore()
+        except Exception:pass
         try:ctl.close()
         except OSError:pass
         if pointer:

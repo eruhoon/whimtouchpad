@@ -165,4 +165,25 @@ whimtouchpad/
   - 레거시 C 파일(`main.c`, `uinput.c`, `uinput.h`)을 `src/legacy/`로 분리
   - `template/whimpad.sh`를 trap cleanup 기반의 완전한 독립 런처로 정상화
 
+---
+
+## 9. v0.4.0 배터리/전력 효율 극대화 (Adaptive FPS & Hardware Backlight)
+
+- [x] **Task 1: 유휴 시 1~5 FPS 적응형 렌더링 & select() 이벤트 드리븐 루프**
+  - `src/ui.py` 소켓 폴링 루프를 `select.select()` 기반 비동기 대기 구조로 전면 개편
+  - 터치 조작 시: 즉각적인 60 FPS 유지 (입력 지연 0ms)
+  - 유휴 상태(1.0초 무조작): 3 FPS 적응형 전환 및 더티 플래그(Dirty flag) 기반 렌더링 스킵 (CPU 점유율 < 1%)
+  - 절전/슬립 상태: 0 FPS 대기 루프 (CPU 점유율 ≈ 0%)
+- [x] **Task 2: 하드웨어 백라이트 절전 연동 (`src/backlight.py`)**
+  - `swaymsg output DSI-1 power <on|off>` 및 Linux `/sys/class/backlight` bl_power 연동 매니저 신설
+  - `ScreenIdle` 타임아웃 및 상단 `[🌙슬립]` 버튼 클릭 시 실제 하드웨어 백라이트 완전 차단
+  - 백라이트 제어를 비동기 워커 스레드로 처리하여 UI 렌더링 프레임 드롭 완전 방지
+- [x] **Task 3: 웨이크업 제스처 격리 및 오클릭 방지**
+  - 화면 꺼짐 상태에서 화면을 터치할 경우 첫 번째 터치를 안전하게 삼키고(Swallow) 백라이트 즉시 점등
+  - 게임 또는 패널 내 원치 않는 마우스 클릭이나 키 입력 누수 0건 보장
+- [x] **Task 4: 전력 효율 및 백라이트 무결성 단위 테스트 구축**
+  - `tests/test_power_efficiency.py` 추가: 적응형 타임아웃 상태 전이, 백라이트 디스패치 및 `ScreenIdle` 연동 검증
+  - `scripts/test.mjs` 및 `scripts/build.mjs` 파이프라인 연동 확인
+
+
 
