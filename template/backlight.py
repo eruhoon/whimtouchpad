@@ -46,11 +46,15 @@ class Backlight:
 
     def _apply_power(self, power: bool):
         state = "on" if power else "off"
-        # 1. Sway Wayland output power/dpms toggle (strictly targets secondary output e.g. DSI-1)
-        for cmd in ("dpms", "power"):
+        # 1. Sway Wayland DPMS toggle (strictly targets secondary output e.g. DSI-1)
+        # CRITICAL: Only use 'dpms', NEVER use 'power off' during runtime!
+        # 'power off' disables the output in Sway, which migrates the WhimPad container
+        # to the primary game screen (DSI-2), stealing focus from the game and triggering
+        # unwanted pause/menu/button events in PortMaster games.
+        if os.environ.get("WHIMPAD_DISABLE_DPMS", "0") != "1":
             try:
                 subprocess.run(
-                    ["swaymsg", "output", self.output, cmd, state],
+                    ["swaymsg", "output", self.output, "dpms", state],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     check=False,
@@ -58,6 +62,7 @@ class Backlight:
                 )
             except Exception:
                 pass
+
 
         # 2. Linux Sysfs backlight toggle (ONLY if verified secondary screen node)
         if self.sysfs_node:

@@ -92,16 +92,9 @@ class TestPowerEfficiency(unittest.TestCase):
 
         # Wait briefly for worker thread execution
         time.sleep(0.05)
-        # Should invoke both dpms and power on DSI-1
-        mock_run.assert_any_call(
+        # Should invoke dpms on DSI-1, but NEVER power off!
+        mock_run.assert_called_with(
             ["swaymsg", "output", "DSI-1", "dpms", "off"],
-            stdout=unittest.mock.ANY,
-            stderr=unittest.mock.ANY,
-            check=False,
-            timeout=1.0,
-        )
-        mock_run.assert_any_call(
-            ["swaymsg", "output", "DSI-1", "power", "off"],
             stdout=unittest.mock.ANY,
             stderr=unittest.mock.ANY,
             check=False,
@@ -112,20 +105,14 @@ class TestPowerEfficiency(unittest.TestCase):
         bl.restore()
         self.assertTrue(bl.powered)
         time.sleep(0.05)
-        mock_run.assert_any_call(
+        mock_run.assert_called_with(
             ["swaymsg", "output", "DSI-1", "dpms", "on"],
             stdout=unittest.mock.ANY,
             stderr=unittest.mock.ANY,
             check=False,
             timeout=1.0,
         )
-        mock_run.assert_any_call(
-            ["swaymsg", "output", "DSI-1", "power", "on"],
-            stdout=unittest.mock.ANY,
-            stderr=unittest.mock.ANY,
-            check=False,
-            timeout=1.0,
-        )
+
 
     def test_backlight_never_targets_primary_screen(self):
         from pathlib import Path
